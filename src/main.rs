@@ -1,9 +1,7 @@
-
 use actix_web::{guard, web, App, HttpResponse, HttpServer, Result};
-use async_graphql::{
-    http::{playground_source, GraphQLPlaygroundConfig}, EmptyMutation, EmptySubscription, Schema};
+use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql_actix_web::{Request, Response};
-use teamdeck_tracker_api::{QueryRoot, ApiSchema, create_schema};
+use teamdeck_tracker_api::{create_schema, ApiSchema};
 
 async fn index(schema: web::Data<ApiSchema>, req: Request) -> Response {
     schema.execute(req.into_inner()).await.into()
@@ -27,7 +25,7 @@ async fn main() -> std::io::Result<()> {
             .service(web::resource("/").guard(guard::Post()).to(index))
             .service(web::resource("/").guard(guard::Get()).to(index_playground))
     })
-        .bind("127.0.0.1:8000")?
-        .run()
-        .await
+    .bind("127.0.0.1:8000")?
+    .run()
+    .await
 }
