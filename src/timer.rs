@@ -1,5 +1,4 @@
 use async_graphql::*;
-use chrono::{DateTime, Utc};
 
 #[derive(SimpleObject)]
 pub struct Timer {

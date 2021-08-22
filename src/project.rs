@@ -4,23 +4,21 @@ use async_graphql::{Context, Object, Result, SimpleObject};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug)]
-pub struct Resource {
+pub struct Project {
     id: u64,
     name: String,
-    active: bool,
-    avatar: Option<String>,
-    email: String,
-    role: String,
+    color: String,
+    archived: bool,
 }
 
 #[derive(Default)]
-pub struct ResourceQuery;
+pub struct ProjectQuery;
 
 #[Object]
-impl ResourceQuery {
-    async fn resource(&self, ctx: &Context<'_>, resource_id: u64) -> Result<Resource> {
+impl ProjectQuery {
+    async fn projects(&self, ctx: &Context<'_>) -> Result<Vec<Project>> {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
-        let resource = client.get_resource_by_id(resource_id).await?;
-        Ok(resource)
+        let projects = client.get_projects().await?;
+        Ok(projects)
     }
 }
