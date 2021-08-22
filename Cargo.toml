@@ -17,5 +17,7 @@ name = "teamdeck_tracker_api"
 async-graphql = "2.9.10"
 async-graphql-actix-web = "2.9.10"
 actix-web = "3"
-actix-rt = "1.1.0"
 chrono = "0.4.19"
+reqwest = { version = "0.10.10", features = ["serde_json", "json"] }
+serde = { version = "1", features = ["derive"]}
+thiserror = "1.0.26"
