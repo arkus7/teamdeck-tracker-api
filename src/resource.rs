@@ -1,6 +1,6 @@
 use crate::teamdeck::api::TeamdeckApiClient;
 use async_graphql::connection::{query, Connection, Edge, EmptyFields};
-use async_graphql::{Context, Object, Result, SimpleObject};
+use async_graphql::{Context, Object, Result, SimpleObject, ResultExt, InputObject};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug)]
@@ -20,7 +20,7 @@ pub struct ResourceQuery;
 impl ResourceQuery {
     async fn resource(&self, ctx: &Context<'_>, resource_id: u64) -> Result<Resource> {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
-        let resource = client.get_resource_by_id(resource_id).await?;
+        let resource = client.get_resource_by_id(resource_id).await.extend()?;
         Ok(resource)
     }
 }
