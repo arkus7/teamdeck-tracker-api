@@ -9,8 +9,8 @@ pub struct Resource {
     name: String,
     active: bool,
     avatar: Option<String>,
-    email: String,
-    role: String,
+    email: Option<String>,
+    role: Option<String>,
 }
 
 #[derive(Default)]
