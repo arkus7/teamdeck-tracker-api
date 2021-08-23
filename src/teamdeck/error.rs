@@ -1,4 +1,6 @@
 use thiserror::Error;
+use async_graphql::{ErrorExtensions, FieldError};
+use std::error::Error;
 
 #[derive(Debug, Error)]
 pub enum TeamdeckApiError {
@@ -7,9 +9,6 @@ pub enum TeamdeckApiError {
 
     #[error("ServerError")]
     ServerError(String),
-
-    #[error("No Extensions")]
-    ErrorWithoutExtensions,
 }
 
 impl From<reqwest::Error> for TeamdeckApiError {
@@ -22,5 +21,14 @@ impl From<reqwest::Error> for TeamdeckApiError {
         } else {
             TeamdeckApiError::ServerError(error.to_string())
         }
+    }
+}
+
+impl ErrorExtensions for TeamdeckApiError {
+    fn extend(&self) -> FieldError {
+        self.extend_with(|err, e| match err {
+            TeamdeckApiError::NotFound => e.set("code", "NOT_FOUND"),
+            TeamdeckApiError::ServerError(reason) => e.set("reason", reason.to_string()),
+        })
     }
 }
