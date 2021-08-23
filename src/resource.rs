@@ -23,4 +23,10 @@ impl ResourceQuery {
         let resource = client.get_resource_by_id(resource_id).await.extend()?;
         Ok(resource)
     }
+
+    async fn resources(&self, ctx: &Context<'_>) -> Result<Vec<Resource>> {
+        let client = ctx.data_unchecked::<TeamdeckApiClient>();
+        let resources = client.get_resources().await.extend()?;
+        Ok(resources)
+    }
 }
