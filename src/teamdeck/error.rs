@@ -1,6 +1,6 @@
-use thiserror::Error;
 use async_graphql::{ErrorExtensions, FieldError};
 use std::error::Error;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum TeamdeckApiError {

@@ -1,15 +1,15 @@
 use crate::project::Project;
-use crate::resource::{Resource};
+use crate::resource::Resource;
 use crate::teamdeck::error::TeamdeckApiError;
+use async_graphql::ErrorExtensions;
 use reqwest;
 use reqwest::header::{HeaderMap, HeaderName, ACCEPT};
 use reqwest::IntoUrl;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-use std::fmt::{Display, Formatter, Debug};
+use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
 use std::process::Output;
-use async_graphql::ErrorExtensions;
 
 const API_KEY_ENV_VARIABLE: &str = "TEAMDECK_API_KEY";
 const API_KEY_HEADER_NAME: &str = "X-Api-Key";
@@ -21,7 +21,8 @@ pub struct TeamdeckApiClient {
 impl TeamdeckApiClient {
     fn from_env() -> Self {
         Self {
-            api_key: std::env::var(API_KEY_ENV_VARIABLE).expect(format!("Missing {} env variable", API_KEY_ENV_VARIABLE).as_str())
+            api_key: std::env::var(API_KEY_ENV_VARIABLE)
+                .expect(format!("Missing {} env variable", API_KEY_ENV_VARIABLE).as_str()),
         }
     }
 }
@@ -72,7 +73,8 @@ pub struct Page<S: Serialize> {
 
 impl TeamdeckApiClient {
     pub async fn get_resource_by_id(&self, id: u64) -> Result<Resource, TeamdeckApiError> {
-        let response = self.get(format!("https://api.teamdeck.io/v1/resources/{}", id).as_str())
+        let response = self
+            .get(format!("https://api.teamdeck.io/v1/resources/{}", id).as_str())
             .send()
             .await?;
         let resource = response.json().await?;
@@ -98,9 +100,10 @@ impl TeamdeckApiClient {
             pagination,
         })
     }
-    
+
     pub async fn get_resources(&self) -> Result<Vec<Resource>, TeamdeckApiError> {
-        self.traverse_all_pages(|page| self.get_resources_page(page)).await
+        self.traverse_all_pages(|page| self.get_resources_page(page))
+            .await
     }
 
     pub async fn get_projects_page(
@@ -125,7 +128,8 @@ impl TeamdeckApiClient {
     }
 
     pub async fn get_projects(&self) -> Result<Vec<Project>, TeamdeckApiError> {
-        self.traverse_all_pages(|page| self.get_projects_page(page)).await
+        self.traverse_all_pages(|page| self.get_projects_page(page))
+            .await
     }
 
     fn get<U: IntoUrl>(&self, url: U) -> reqwest::RequestBuilder {
@@ -135,10 +139,22 @@ impl TeamdeckApiClient {
     }
 
     fn read_pagination_info(headers: &HeaderMap) -> Result<PaginationInfo, TeamdeckApiError> {
-        let pages_count = TeamdeckApiClient::get_pagination_header_value(headers, PaginationHeader::PagesCount.into())?;
-        let total_count = TeamdeckApiClient::get_pagination_header_value(headers, PaginationHeader::TotalCount.into())?;
-        let current_page = TeamdeckApiClient::get_pagination_header_value(headers, PaginationHeader::CurrentPage.into())?;
-        let items_per_page = TeamdeckApiClient::get_pagination_header_value(headers, PaginationHeader::ItemsPerPage.into())?;
+        let pages_count = TeamdeckApiClient::get_pagination_header_value(
+            headers,
+            PaginationHeader::PagesCount.into(),
+        )?;
+        let total_count = TeamdeckApiClient::get_pagination_header_value(
+            headers,
+            PaginationHeader::TotalCount.into(),
+        )?;
+        let current_page = TeamdeckApiClient::get_pagination_header_value(
+            headers,
+            PaginationHeader::CurrentPage.into(),
+        )?;
+        let items_per_page = TeamdeckApiClient::get_pagination_header_value(
+            headers,
+            PaginationHeader::ItemsPerPage.into(),
+        )?;
 
         Ok(PaginationInfo {
             total_count,
@@ -159,15 +175,22 @@ impl TeamdeckApiClient {
                 &header
             )));
 
-        let string_val = header_value?.to_str().map_err(|e| TeamdeckApiError::ServerError(e.to_string()))?;
-        string_val.parse::<u64>().map_err(|e| TeamdeckApiError::ServerError(e.to_string()))
+        let string_val = header_value?
+            .to_str()
+            .map_err(|e| TeamdeckApiError::ServerError(e.to_string()))?;
+        string_val
+            .parse::<u64>()
+            .map_err(|e| TeamdeckApiError::ServerError(e.to_string()))
     }
 
-    async fn traverse_all_pages<F, ResultFuture, PageItem>(&self, f: F) -> Result<Vec<PageItem>, TeamdeckApiError>
-        where
-            F: Copy + FnOnce(Option<u64>) -> ResultFuture,
-            ResultFuture: Future<Output = Result<Page<PageItem>, TeamdeckApiError>>,
-            PageItem: Serialize + Debug
+    async fn traverse_all_pages<F, ResultFuture, PageItem>(
+        &self,
+        f: F,
+    ) -> Result<Vec<PageItem>, TeamdeckApiError>
+    where
+        F: Copy + FnOnce(Option<u64>) -> ResultFuture,
+        ResultFuture: Future<Output = Result<Page<PageItem>, TeamdeckApiError>>,
+        PageItem: Serialize + Debug,
     {
         let mut items: Vec<PageItem> = vec![];
         let mut current_page = 0;

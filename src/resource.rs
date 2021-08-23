@@ -1,6 +1,6 @@
 use crate::teamdeck::api::TeamdeckApiClient;
 use async_graphql::connection::{query, Connection, Edge, EmptyFields};
-use async_graphql::{Context, Object, Result, SimpleObject, ResultExt, InputObject};
+use async_graphql::{Context, InputObject, Object, Result, ResultExt, SimpleObject};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug)]
