@@ -1,24 +1,34 @@
 use crate::project::Project;
-use crate::resource::Resource;
+use crate::resource::{Resource};
 use crate::teamdeck::error::TeamdeckApiError;
 use reqwest;
 use reqwest::header::{HeaderMap, HeaderName, ACCEPT};
 use reqwest::IntoUrl;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Debug};
 use std::future::Future;
 use std::process::Output;
+use async_graphql::ErrorExtensions;
+
+const API_KEY_ENV_VARIABLE: &str = "TEAMDECK_API_KEY";
+const API_KEY_HEADER_NAME: &str = "X-Api-Key";
 
 pub struct TeamdeckApiClient {
     api_key: String,
 }
 
+impl TeamdeckApiClient {
+    fn from_env() -> Self {
+        Self {
+            api_key: std::env::var(API_KEY_ENV_VARIABLE).expect(format!("Missing {} env variable", API_KEY_ENV_VARIABLE).as_str())
+        }
+    }
+}
+
 impl Default for TeamdeckApiClient {
     fn default() -> Self {
-        TeamdeckApiClient {
-            api_key: env!("TEAMDECK_API_KEY").to_string(),
-        }
+        TeamdeckApiClient::from_env()
     }
 }
 
@@ -61,14 +71,36 @@ pub struct Page<S: Serialize> {
 }
 
 impl TeamdeckApiClient {
-    pub async fn get_resource_by_id(&self, id: u64) -> reqwest::Result<Resource> {
-        reqwest::Client::new()
-            .get(format!("https://api.teamdeck.io/v1/resources/{}", id).as_str())
-            .header("X-API-KEY", &self.api_key)
+    pub async fn get_resource_by_id(&self, id: u64) -> Result<Resource, TeamdeckApiError> {
+        let response = self.get(format!("https://api.teamdeck.io/v1/resources/{}", id).as_str())
             .send()
-            .await?
-            .json()
-            .await
+            .await?;
+        let resource = response.json().await?;
+
+        Ok(resource)
+    }
+
+    pub async fn get_resources_page(
+        &self,
+        page: Option<u64>,
+    ) -> Result<Page<Resource>, TeamdeckApiError> {
+        let response = self
+            .get("https://api.teamdeck.io/v1/resources")
+            .query(&[("page", page.unwrap_or(1))])
+            .send()
+            .await?;
+        let headers = response.headers().clone();
+        let pagination = TeamdeckApiClient::read_pagination_info(&headers)?;
+        let resources = response.json().await?;
+
+        Ok(Page {
+            items: resources,
+            pagination,
+        })
+    }
+    
+    pub async fn get_resources(&self) -> Result<Vec<Resource>, TeamdeckApiError> {
+        self.traverse_all_pages(|page| self.get_resources_page(page)).await
     }
 
     pub async fn get_projects_page(
@@ -93,37 +125,16 @@ impl TeamdeckApiClient {
     }
 
     pub async fn get_projects(&self) -> Result<Vec<Project>, TeamdeckApiError> {
-        // TODO: fix to use traverse_all_pages
-        // let res: Result<Vec<Project>, TeamdeckApiError> = self.traverse_all_pages(Self::get_projects_page).await;
-        let mut items: Vec<Project> = vec![];
-        let mut current_page = 0;
-        let mut total_pages: u64 = 1;
-
-        while current_page != total_pages {
-            current_page = current_page + 1;
-            println!("total pages: {:?}, current page: {}", total_pages, current_page);
-            let page = self.get_projects_page(Some(current_page)).await?;
-            items.extend(page.items);
-            total_pages = page.pagination.pages_count
-        }
-
-        Ok(items)
+        self.traverse_all_pages(|page| self.get_projects_page(page)).await
     }
 
     fn get<U: IntoUrl>(&self, url: U) -> reqwest::RequestBuilder {
         reqwest::Client::new()
             .get(url)
-            .header("X-API-KEY", &self.api_key)
+            .header(API_KEY_HEADER_NAME, &self.api_key)
     }
 
     fn read_pagination_info(headers: &HeaderMap) -> Result<PaginationInfo, TeamdeckApiError> {
-        // let total_count = headers
-        //     .get("x-pagination-total-count")
-        //     .expect("x-pagination-total-count missing")
-        //     .to_str()
-        //     .expect("x-pagination-total-count is not string")
-        //     .parse::<u64>()
-        //     .unwrap_or(0);
         let pages_count = TeamdeckApiClient::get_pagination_header_value(headers, PaginationHeader::PagesCount.into())?;
         let total_count = TeamdeckApiClient::get_pagination_header_value(headers, PaginationHeader::TotalCount.into())?;
         let current_page = TeamdeckApiClient::get_pagination_header_value(headers, PaginationHeader::CurrentPage.into())?;
@@ -152,12 +163,11 @@ impl TeamdeckApiClient {
         string_val.parse::<u64>().map_err(|e| TeamdeckApiError::ServerError(e.to_string()))
     }
 
-    // TODO: Fix types, not working so far
-    async fn traverse_all_pages<F: Copy, ResultFuture, PageItem>(&self, f: F) -> Result<Vec<PageItem>, TeamdeckApiError>
+    async fn traverse_all_pages<F, ResultFuture, PageItem>(&self, f: F) -> Result<Vec<PageItem>, TeamdeckApiError>
         where
-            F: FnOnce(&Self, Option<u64>) -> ResultFuture,
+            F: Copy + FnOnce(Option<u64>) -> ResultFuture,
             ResultFuture: Future<Output = Result<Page<PageItem>, TeamdeckApiError>>,
-            PageItem: Serialize
+            PageItem: Serialize + Debug
     {
         let mut items: Vec<PageItem> = vec![];
         let mut current_page = 0;
@@ -165,8 +175,7 @@ impl TeamdeckApiClient {
 
         while current_page != total_pages {
             current_page = current_page + 1;
-            println!("total pages: {:?}, current page: {}", total_pages, current_page);
-            let page = f(self, Some(current_page)).await?;
+            let page = f(Some(current_page)).await?;
             items.extend(page.items);
             total_pages = page.pagination.pages_count
         }
