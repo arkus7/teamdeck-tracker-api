@@ -4,7 +4,7 @@ use crate::teamdeck::error::TeamdeckApiError;
 use reqwest;
 use reqwest::header::{HeaderMap, HeaderName};
 use reqwest::IntoUrl;
-use serde::{Serialize};
+use serde::Serialize;
 use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
 
@@ -69,11 +69,7 @@ pub struct Page<S: Serialize> {
 }
 
 impl TeamdeckApiClient {
-    #[tracing::instrument(
-        name = "Fetching resource by ID from Teamdeck API",
-        skip(self),
-        err
-    )]
+    #[tracing::instrument(name = "Fetching resource by ID from Teamdeck API", skip(self), err)]
     pub async fn get_resource_by_id(&self, id: u64) -> Result<Resource, TeamdeckApiError> {
         let response = self
             .get(format!("https://api.teamdeck.io/v1/resources/{}", id).as_str())
@@ -84,11 +80,7 @@ impl TeamdeckApiClient {
         Ok(resource)
     }
 
-    #[tracing::instrument(
-        name = "Fetching resource page from Teamdeck API",
-        skip(self),
-        err
-    )]
+    #[tracing::instrument(name = "Fetching resource page from Teamdeck API", skip(self), err)]
     pub async fn get_resources_page(
         &self,
         page: Option<u64>,
@@ -109,21 +101,13 @@ impl TeamdeckApiClient {
         })
     }
 
-    #[tracing::instrument(
-        name = "Fetching all resources from Teamdeck API",
-        skip(self),
-        err
-    )]
+    #[tracing::instrument(name = "Fetching all resources from Teamdeck API", skip(self), err)]
     pub async fn get_resources(&self) -> Result<Vec<Resource>, TeamdeckApiError> {
         self.traverse_all_pages(|page| self.get_resources_page(page))
             .await
     }
 
-    #[tracing::instrument(
-        name = "Fetching projects page from Teamdeck API",
-        skip(self),
-        err
-    )]
+    #[tracing::instrument(name = "Fetching projects page from Teamdeck API", skip(self), err)]
     pub async fn get_projects_page(
         &self,
         page: Option<u64>,
@@ -145,11 +129,7 @@ impl TeamdeckApiClient {
         })
     }
 
-    #[tracing::instrument(
-        name = "Fetching all projects from Teamdeck API",
-        skip(self),
-        err
-    )]
+    #[tracing::instrument(name = "Fetching all projects from Teamdeck API", skip(self), err)]
     pub async fn get_projects(&self) -> Result<Vec<Project>, TeamdeckApiError> {
         self.traverse_all_pages(|page| self.get_projects_page(page))
             .await

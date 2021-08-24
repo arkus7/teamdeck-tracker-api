@@ -1,4 +1,4 @@
-use async_graphql::{InputValueError, InputValueResult, ScalarType, Value, Scalar};
+use async_graphql::{InputValueError, InputValueResult, Scalar, ScalarType, Value};
 use chrono::{DateTime, Utc};
 
 /// DateTime RFC3339

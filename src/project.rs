@@ -15,10 +15,7 @@ pub struct ProjectQuery;
 
 #[Object]
 impl ProjectQuery {
-    #[tracing::instrument(
-        name = "Fetching all projects",
-        skip(ctx)
-    )]
+    #[tracing::instrument(name = "Fetching all projects", skip(ctx))]
     async fn projects(&self, ctx: &Context<'_>) -> Result<Vec<Project>> {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
         let projects = client.get_projects().await?;

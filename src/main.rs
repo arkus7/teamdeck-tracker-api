@@ -1,11 +1,11 @@
 mod telemetry;
 
+use crate::telemetry::{get_logs_subscriber, init_logs_subscriber};
 use actix_web::web::Data;
 use actix_web::{guard, web, App, HttpResponse, HttpServer, Result};
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql_actix_web::{Request, Response};
 use teamdeck_tracker_api::{create_schema, ApiSchema};
-use crate::telemetry::{get_logs_subscriber, init_logs_subscriber};
 use tracing_actix_web::{TracingLogger, TracingLoggerMiddleware};
 
 async fn index(schema: web::Data<ApiSchema>, req: Request) -> Response {
@@ -22,7 +22,8 @@ async fn index_playground() -> Result<HttpResponse> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let logs_subscriber = get_logs_subscriber("TeamdeckTimerAPI".into(), "info".into(), std::io::stdout);
+    let logs_subscriber =
+        get_logs_subscriber("TeamdeckTimerAPI".into(), "info".into(), std::io::stdout);
     init_logs_subscriber(logs_subscriber);
 
     println!("Playground: http://localhost:8000");
