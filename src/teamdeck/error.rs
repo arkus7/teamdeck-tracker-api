@@ -1,5 +1,4 @@
 use async_graphql::{ErrorExtensions, FieldError};
-use std::error::Error;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

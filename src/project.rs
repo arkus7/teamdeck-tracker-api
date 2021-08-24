@@ -1,5 +1,4 @@
 use crate::teamdeck::api::TeamdeckApiClient;
-use async_graphql::connection::{query, Connection, Edge, EmptyFields};
 use async_graphql::{Context, Object, Result, SimpleObject};
 use serde::{Deserialize, Serialize};
 

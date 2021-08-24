@@ -1,15 +1,12 @@
 use crate::project::Project;
 use crate::resource::Resource;
 use crate::teamdeck::error::TeamdeckApiError;
-use async_graphql::ErrorExtensions;
 use reqwest;
-use reqwest::header::{HeaderMap, HeaderName, ACCEPT};
+use reqwest::header::{HeaderMap, HeaderName};
 use reqwest::IntoUrl;
-use serde::{Deserialize, Serialize};
-use std::error::Error;
+use serde::{Serialize};
 use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
-use std::process::Output;
 
 const API_KEY_ENV_VARIABLE: &str = "TEAMDECK_API_KEY";
 const API_KEY_HEADER_NAME: &str = "X-Api-Key";

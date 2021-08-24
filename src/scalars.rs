@@ -1,5 +1,5 @@
 use async_graphql::{InputValueError, InputValueResult, ScalarType, Value, Scalar};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 
 /// DateTime RFC3339
 pub struct Date(pub DateTime<Utc>);
@@ -18,5 +18,11 @@ impl ScalarType for Date {
 
     fn to_value(&self) -> Value {
         Value::String(self.0.to_rfc3339())
+    }
+}
+
+impl Clone for Date {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
     }
 }
