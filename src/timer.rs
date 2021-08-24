@@ -26,23 +26,31 @@ impl Timer {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct TimerQuery;
 
 #[Object]
 impl TimerQuery {
+    #[tracing::instrument(
+        name = "Find current timer",
+        skip(self, ctx),
+    )]
     async fn current_timer<'ctx>(&'ctx self, ctx: &Context<'ctx>, resource_id: u64) -> Result<Option<Timer>> {
         let timers = ctx.data_unchecked::<Timers>();
         Ok(timers.get_by_resource_id(resource_id).last().cloned())
     }
 
+    #[tracing::instrument(
+        name = "Find all timers for resource",
+        skip(self, ctx),
+    )]
     async fn timers<'ctx>(&'ctx self, ctx: &Context<'ctx>, resource_id: u64) -> Result<Vec<Timer>> {
         let timers = ctx.data_unchecked::<Timers>();
         Ok(timers.get_by_resource_id(resource_id))
     }
 }
 
-#[derive(InputObject)]
+#[derive(InputObject, Debug)]
 pub struct CreateTimerInput {
     resource_id: u64,
     project_id: u64,
@@ -54,6 +62,10 @@ pub struct TimerMutation;
 
 #[Object]
 impl TimerMutation {
+    #[tracing::instrument(
+        name = "Starting new timer",
+        skip(self, ctx),
+    )]
     async fn start_timer(&self, ctx: &Context<'_>, input: CreateTimerInput) -> Result<Timer> {
         let timer = Timer::from_input(input);
         let timers = ctx.data_unchecked::<Timers>();
