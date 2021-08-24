@@ -69,6 +69,11 @@ pub struct Page<S: Serialize> {
 }
 
 impl TeamdeckApiClient {
+    #[tracing::instrument(
+        name = "Fetching resource by ID from Teamdeck API",
+        skip(self),
+        err
+    )]
     pub async fn get_resource_by_id(&self, id: u64) -> Result<Resource, TeamdeckApiError> {
         let response = self
             .get(format!("https://api.teamdeck.io/v1/resources/{}", id).as_str())
@@ -79,6 +84,11 @@ impl TeamdeckApiClient {
         Ok(resource)
     }
 
+    #[tracing::instrument(
+        name = "Fetching resource page from Teamdeck API",
+        skip(self),
+        err
+    )]
     pub async fn get_resources_page(
         &self,
         page: Option<u64>,
@@ -88,6 +98,7 @@ impl TeamdeckApiClient {
             .query(&[("page", page.unwrap_or(1))])
             .send()
             .await?;
+        tracing::debug!("Response: {:?}", response);
         let headers = response.headers().clone();
         let pagination = TeamdeckApiClient::read_pagination_info(&headers)?;
         let resources = response.json().await?;
@@ -98,11 +109,21 @@ impl TeamdeckApiClient {
         })
     }
 
+    #[tracing::instrument(
+        name = "Fetching all resources from Teamdeck API",
+        skip(self),
+        err
+    )]
     pub async fn get_resources(&self) -> Result<Vec<Resource>, TeamdeckApiError> {
         self.traverse_all_pages(|page| self.get_resources_page(page))
             .await
     }
 
+    #[tracing::instrument(
+        name = "Fetching projects page from Teamdeck API",
+        skip(self),
+        err
+    )]
     pub async fn get_projects_page(
         &self,
         page: Option<u64>,
@@ -124,6 +145,11 @@ impl TeamdeckApiClient {
         })
     }
 
+    #[tracing::instrument(
+        name = "Fetching all projects from Teamdeck API",
+        skip(self),
+        err
+    )]
     pub async fn get_projects(&self) -> Result<Vec<Project>, TeamdeckApiError> {
         self.traverse_all_pages(|page| self.get_projects_page(page))
             .await
@@ -180,6 +206,12 @@ impl TeamdeckApiClient {
             .map_err(|e| TeamdeckApiError::ServerError(e.to_string()))
     }
 
+    #[tracing::instrument(
+        name = "Traverse all pages",
+        skip(self, f),
+        level = "debug"
+        err
+    )]
     async fn traverse_all_pages<F, ResultFuture, PageItem>(
         &self,
         f: F,
@@ -197,7 +229,7 @@ impl TeamdeckApiClient {
             current_page = current_page + 1;
             let page = f(Some(current_page)).await?;
             items.extend(page.items);
-            total_pages = page.pagination.pages_count
+            total_pages = page.pagination.pages_count;
         }
 
         Ok(items)
