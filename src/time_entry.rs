@@ -108,6 +108,7 @@ pub struct CreateTimeEntryFromTimeRangeInput {
 
 #[Object]
 impl TimeEntryMutation {
+    #[tracing::instrument(name = "Add time entry from duration", skip(ctx))]
     async fn add_time_entry_from_duration(
         &self,
         ctx: &Context<'_>,
@@ -121,6 +122,7 @@ impl TimeEntryMutation {
         Ok(time_entry)
     }
 
+    #[tracing::instrument(name = "Add time entry from time range", skip(ctx))]
     async fn add_time_entry_from_time_range(
         &self,
         ctx: &Context<'_>,
