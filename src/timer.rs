@@ -1,4 +1,4 @@
-use crate::scalars::Date;
+use crate::scalars::DateTime;
 use async_graphql::*;
 use chrono::Utc;
 use std::sync::{Arc, Mutex};
@@ -7,8 +7,8 @@ use std::sync::{Arc, Mutex};
 pub struct Timer {
     id: u64,
     resource_id: u64,
-    started_at: Date,
-    ended_at: Option<Date>,
+    started_at: DateTime,
+    ended_at: Option<DateTime>,
     description: Option<String>,
     project_id: u64,
 }
@@ -18,7 +18,7 @@ impl Timer {
         Timer {
             id: 0,
             resource_id: input.resource_id,
-            started_at: Date(Utc::now()),
+            started_at: DateTime(Utc::now()),
             ended_at: None,
             description: input.description,
             project_id: input.project_id,

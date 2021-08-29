@@ -1,14 +1,16 @@
 use async_graphql::{InputValueError, InputValueResult, Scalar, ScalarType, Value};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime as ChronoDateTime, Date as ChronoDate, Utc, NaiveDate};
+use serde::{Deserialize, Serialize};
 
 /// DateTime RFC3339
-pub struct Date(pub DateTime<Utc>);
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DateTime(pub ChronoDateTime<Utc>);
 
 #[Scalar]
-impl ScalarType for Date {
+impl ScalarType for DateTime {
     fn parse(value: Value) -> InputValueResult<Self> {
         if let Value::String(value) = &value {
-            Ok(Date(DateTime::from(DateTime::parse_from_rfc3339(
+            Ok(DateTime(ChronoDateTime::from(ChronoDateTime::parse_from_rfc3339(
                 value.as_str(),
             )?)))
         } else {
@@ -18,6 +20,33 @@ impl ScalarType for Date {
 
     fn to_value(&self) -> Value {
         Value::String(self.0.to_rfc3339())
+    }
+}
+
+impl Clone for DateTime {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+/// Date in YYYY-MM-DD format
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Date(pub NaiveDate);
+
+const DATE_FORMAT: &'static str ="%Y-%m-%d";
+
+#[Scalar]
+impl ScalarType for Date {
+    fn parse(value: Value) -> InputValueResult<Self> {
+        if let Value::String(value) = &value {
+            Ok(Date(NaiveDate::parse_from_str(value, DATE_FORMAT)?))
+        } else {
+            Err(InputValueError::expected_type(value))
+        }
+    }
+
+    fn to_value(&self) -> Value {
+        Value::String(self.0.format(DATE_FORMAT).to_string())
     }
 }
 
