@@ -8,7 +8,7 @@ mod timer;
 use crate::project::ProjectQuery;
 use crate::resource::ResourceQuery;
 use crate::teamdeck::api::TeamdeckApiClient;
-use crate::time_entry::TimeEntryQuery;
+use crate::time_entry::{TimeEntryMutation, TimeEntryQuery};
 use crate::timer::{TimerMutation, TimerQuery, Timers};
 use async_graphql::extensions::ApolloTracing;
 use async_graphql::{EmptySubscription, MergedObject, Schema};
@@ -19,7 +19,7 @@ pub type ApiSchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
 pub struct QueryRoot(TimerQuery, ResourceQuery, ProjectQuery, TimeEntryQuery);
 
 #[derive(MergedObject, Default)]
-pub struct MutationRoot(TimerMutation);
+pub struct MutationRoot(TimerMutation, TimeEntryMutation);
 
 pub fn create_schema() -> ApiSchema {
     Schema::build(
