@@ -7,6 +7,8 @@ use reqwest::IntoUrl;
 use serde::Serialize;
 use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
+use chrono::{DateTime, Utc};
+use crate::time_entry::TimeEntry;
 
 const API_KEY_ENV_VARIABLE: &str = "TEAMDECK_API_KEY";
 const API_KEY_HEADER_NAME: &str = "X-Api-Key";
@@ -133,6 +135,29 @@ impl TeamdeckApiClient {
     pub async fn get_projects(&self) -> Result<Vec<Project>, TeamdeckApiError> {
         self.traverse_all_pages(|page| self.get_projects_page(page))
             .await
+    }
+
+    #[tracing::instrument(name = "Fetching all time entries page from Teamdeck API", skip(self), err)]
+    pub async fn get_time_entries(&self, resource_id: u64, date: Option<DateTime<Utc>>) -> Result<Vec<TimeEntry>, TeamdeckApiError> {
+        self.traverse_all_pages(|page| self.get_time_entries_page(resource_id, date, page)).await
+    }
+
+    #[tracing::instrument(name = "Fetching time entries page from Teamdeck API", skip(self), err)]
+    pub async fn get_time_entries_page(&self, resource_id: u64, date: Option<DateTime<Utc>>, page: Option<u64>) -> Result<Page<TimeEntry>, TeamdeckApiError> {
+        let response = self.get("https://api.teamdeck.io/v1/time-entries")
+            .query(&[("resource_id", resource_id.to_string()), ("page", page.unwrap_or(1).to_string()), ("expand", "tags".to_string())])
+            .send()
+            .await?;
+
+        let headers = response.headers();
+        let pagination = TeamdeckApiClient::read_pagination_info(&headers)?;
+
+        let time_entries = response.json().await?;
+
+        Ok(Page {
+            items: time_entries,
+            pagination,
+        })
     }
 
     fn get<U: IntoUrl>(&self, url: U) -> reqwest::RequestBuilder {
