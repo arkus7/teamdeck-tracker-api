@@ -33,7 +33,7 @@ impl Clone for DateTime {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Date(pub NaiveDate);
 
-const DATE_FORMAT: &'static str = "%Y-%m-%d";
+pub const DATE_FORMAT: &'static str = "%Y-%m-%d";
 
 #[Scalar]
 impl ScalarType for Date {
