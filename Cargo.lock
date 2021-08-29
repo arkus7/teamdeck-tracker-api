@@ -2239,6 +2239,7 @@ dependencies = [
  "chrono",
  "reqwest",
  "serde",
+ "serde_json",
  "thiserror",
  "tracing",
  "tracing-actix-web",
