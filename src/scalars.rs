@@ -1,5 +1,5 @@
 use async_graphql::{InputValueError, InputValueResult, Scalar, ScalarType, Value};
-use chrono::{DateTime as ChronoDateTime, NaiveDate, Utc};
+use chrono::{DateTime as ChronoDateTime, Duration, NaiveDate, NaiveTime, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 
 /// DateTime RFC3339
@@ -51,6 +51,43 @@ impl ScalarType for Date {
 }
 
 impl Clone for Date {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
+    }
+}
+
+/// Time in HH:MM format
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Time(pub NaiveTime);
+
+const TIME_FORMAT: &'static str = "%H:%M";
+
+#[Scalar]
+impl ScalarType for Time {
+    fn parse(value: Value) -> InputValueResult<Self> {
+        if let Value::String(value) = &value {
+            Ok(Time(NaiveTime::parse_from_str(value, TIME_FORMAT)?))
+        } else {
+            Err(InputValueError::expected_type(value))
+        }
+    }
+
+    fn to_value(&self) -> Value {
+        Value::String(self.0.format(TIME_FORMAT).to_string())
+    }
+}
+
+impl Time {
+    pub fn to_duration(&self) -> Duration {
+        Duration::hours(self.0.hour().into()) + Duration::minutes(self.0.minute().into())
+    }
+
+    pub fn duration_to(&self, other: Self) -> Duration {
+        other.to_duration() - self.to_duration()
+    }
+}
+
+impl Clone for Time {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
