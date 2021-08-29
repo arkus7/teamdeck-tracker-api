@@ -1,10 +1,11 @@
 use crate::project::Project;
-use crate::scalars::Date;
-use crate::teamdeck::api::TeamdeckApiClient;
-use async_graphql::{ComplexObject, Context, Object, Result, ResultExt, SimpleObject};
-use serde::{Deserialize, Serialize};
 use crate::resource::Resource;
-use chrono::Duration;
+use crate::scalars::{Date, DateTime, Time};
+use crate::teamdeck::api::{CreateTimeEntryBody, TeamdeckApiClient};
+use crate::teamdeck::error::TeamdeckApiError;
+use async_graphql::{ComplexObject, Context, InputObject, Object, Result, ResultExt, SimpleObject};
+use chrono::{Duration, NaiveDate, Utc};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug)]
 #[graphql(complex)]
@@ -22,7 +23,7 @@ pub struct TimeEntry {
     end_date: Date,
     creator_resource_id: Option<u64>,
     editor_resource_id: Option<u64>,
-    tags: Vec<TimeEntryTag>,
+    tags: Option<Vec<TimeEntryTag>>,
 }
 
 #[ComplexObject]
@@ -62,9 +63,78 @@ pub struct TimeEntryQuery;
 #[Object]
 impl TimeEntryQuery {
     #[tracing::instrument(name = "Fetching all time entries for resource", skip(ctx))]
-    async fn time_entries(&self, ctx: &Context<'_>, resource_id: u64, date: Option<Date>) -> Result<Vec<TimeEntry>> {
+    async fn time_entries(
+        &self,
+        ctx: &Context<'_>,
+        resource_id: u64,
+        date: Option<Date>,
+    ) -> Result<Vec<TimeEntry>> {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
-        let time_entries = client.get_time_entries(resource_id, date.map(|d| d.0)).await.extend()?;
+        let time_entries = client
+            .get_time_entries(resource_id, date.map(|d| d.0))
+            .await
+            .extend()?;
         Ok(time_entries)
+    }
+}
+
+#[derive(Default, Debug)]
+pub struct TimeEntryMutation;
+
+#[derive(InputObject, Debug, Serialize, Deserialize)]
+pub struct CreateTimeEntryInput {
+    pub resource_id: u64,
+    pub project_id: u64,
+    pub weekend_booking: Option<bool>,
+    pub holidays_booking: Option<bool>,
+    pub vacations_booking: Option<bool>,
+    pub description: Option<String>,
+}
+
+#[derive(InputObject, Debug)]
+pub struct CreateTimeEntryFromDurationInput {
+    entry_input: CreateTimeEntryInput,
+    duration: Time,
+    date: Option<Date>,
+}
+
+#[derive(InputObject, Debug)]
+pub struct CreateTimeEntryFromTimeRangeInput {
+    entry_input: CreateTimeEntryInput,
+    start: Time,
+    end: Time,
+    date: Option<Date>,
+}
+
+#[Object]
+impl TimeEntryMutation {
+    async fn add_time_entry_from_duration(
+        &self,
+        ctx: &Context<'_>,
+        input: CreateTimeEntryFromDurationInput,
+    ) -> Result<TimeEntry> {
+        let client = ctx.data_unchecked::<TeamdeckApiClient>();
+        let minutes = input.duration.to_duration().num_minutes().unsigned_abs();
+        let request_body =
+            CreateTimeEntryBody::from_graphql_input(input.entry_input, input.date, minutes);
+        let time_entry = client.add_time_entry(request_body).await.extend()?;
+        Ok(time_entry)
+    }
+
+    async fn add_time_entry_from_time_range(
+        &self,
+        ctx: &Context<'_>,
+        input: CreateTimeEntryFromTimeRangeInput,
+    ) -> Result<TimeEntry> {
+        let client = ctx.data_unchecked::<TeamdeckApiClient>();
+        let minutes = input
+            .start
+            .duration_to(input.end)
+            .num_minutes()
+            .unsigned_abs();
+        let request_body =
+            CreateTimeEntryBody::from_graphql_input(input.entry_input, input.date, minutes);
+        let time_entry = client.add_time_entry(request_body).await.extend()?;
+        Ok(time_entry)
     }
 }

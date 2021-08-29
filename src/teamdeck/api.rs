@@ -1,16 +1,16 @@
 use crate::project::Project;
 use crate::resource::Resource;
+use crate::scalars::{Date, DATE_FORMAT};
 use crate::teamdeck::error::TeamdeckApiError;
-use crate::time_entry::TimeEntry;
-use chrono::{DateTime, Utc, NaiveDate};
+use crate::time_entry::{CreateTimeEntryInput, TimeEntry};
+use chrono::{DateTime, NaiveDate, Utc};
 use reqwest;
 use reqwest::header::{HeaderMap, HeaderName};
 use reqwest::IntoUrl;
 use serde::Serialize;
+use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
-use std::collections::HashMap;
-use crate::scalars::DATE_FORMAT;
 
 const API_KEY_ENV_VARIABLE: &str = "TEAMDECK_API_KEY";
 const API_KEY_HEADER_NAME: &str = "X-Api-Key";
@@ -72,9 +72,50 @@ pub struct Page<S: Serialize> {
     pub pagination: PaginationInfo,
 }
 
+#[derive(Debug, Serialize)]
+pub struct CreateTimeEntryBody {
+    pub resource_id: u64,
+    pub project_id: u64,
+    pub minutes: u64,
+    pub weekend_booking: Option<bool>,
+    pub holidays_booking: Option<bool>,
+    pub vacations_booking: Option<bool>,
+    pub description: Option<String>,
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub creator_resource_id: u64,
+    pub editor_resource_id: u64,
+}
+
+impl CreateTimeEntryBody {
+    pub fn from_graphql_input(
+        input: CreateTimeEntryInput,
+        date: Option<Date>,
+        minutes: u64,
+    ) -> Self {
+        let date = date.unwrap_or(Date(Utc::today().naive_utc())).0;
+        CreateTimeEntryBody {
+            resource_id: input.resource_id,
+            project_id: input.project_id,
+            minutes,
+            weekend_booking: input.weekend_booking,
+            holidays_booking: input.holidays_booking,
+            vacations_booking: input.vacations_booking,
+            description: input.description,
+            start_date: date,
+            end_date: date,
+            creator_resource_id: input.resource_id,
+            editor_resource_id: input.resource_id,
+        }
+    }
+}
+
 impl TeamdeckApiClient {
     #[tracing::instrument(name = "Fetching resource by ID from Teamdeck API", skip(self), err)]
-    pub async fn get_resource_by_id(&self, resource_id: u64) -> Result<Option<Resource>, TeamdeckApiError> {
+    pub async fn get_resource_by_id(
+        &self,
+        resource_id: u64,
+    ) -> Result<Option<Resource>, TeamdeckApiError> {
         let resource = self
             .get(format!("https://api.teamdeck.io/v1/resources/{}", resource_id).as_str())
             .send()
@@ -140,13 +181,13 @@ impl TeamdeckApiClient {
             .await
     }
 
-    #[tracing::instrument(
-        name = "Fetching project by ID from Teamdeck API",
-        skip(self),
-        err
-    )]
-    pub async fn get_project_by_id(&self, project_id: u64) -> Result<Option<Project>, TeamdeckApiError> {
-        let project = self.get(format!("https://api.teamdeck.io/v1/projects/{}", project_id).as_str())
+    #[tracing::instrument(name = "Fetching project by ID from Teamdeck API", skip(self), err)]
+    pub async fn get_project_by_id(
+        &self,
+        project_id: u64,
+    ) -> Result<Option<Project>, TeamdeckApiError> {
+        let project = self
+            .get(format!("https://api.teamdeck.io/v1/projects/{}", project_id).as_str())
             .send()
             .await?
             .json()
@@ -201,9 +242,33 @@ impl TeamdeckApiClient {
         })
     }
 
+    #[tracing::instrument(name = "Create new time entry via Teamdeck API", skip(self), err)]
+    pub async fn add_time_entry(
+        &self,
+        body: CreateTimeEntryBody,
+    ) -> Result<TimeEntry, TeamdeckApiError> {
+        let response = self
+            .post("https://api.teamdeck.io/v1/time-entries")
+            .json(&body)
+            .send()
+            .await?;
+
+        let response_body = response.text().await?;
+        dbg!(&response_body);
+        let time_entry = serde_json::from_str(&response_body)
+            .map_err(|e| TeamdeckApiError::ServerError(e.to_string()))?;
+        Ok(time_entry)
+    }
+
     fn get<U: IntoUrl>(&self, url: U) -> reqwest::RequestBuilder {
         reqwest::Client::new()
             .get(url)
+            .header(API_KEY_HEADER_NAME, &self.api_key)
+    }
+
+    fn post<U: IntoUrl>(&self, url: U) -> reqwest::RequestBuilder {
+        reqwest::Client::new()
+            .post(url)
             .header(API_KEY_HEADER_NAME, &self.api_key)
     }
 

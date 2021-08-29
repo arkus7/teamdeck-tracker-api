@@ -1,6 +1,6 @@
 use async_graphql::{ErrorExtensions, FieldError};
-use thiserror::Error;
 use serde::Deserialize;
+use thiserror::Error;
 
 #[derive(Debug, Error, Deserialize)]
 pub enum TeamdeckApiError {
