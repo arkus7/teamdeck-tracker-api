@@ -1,8 +1,10 @@
-use crate::teamdeck::api::TeamdeckApiClient;
-use async_graphql::{Context, Object, Result, SimpleObject, ComplexObject, ErrorExtensions, ResultExt};
-use serde::{Deserialize, Serialize};
-use crate::scalars::{DateTime, Date};
 use crate::project::Project;
+use crate::scalars::{Date, DateTime};
+use crate::teamdeck::api::TeamdeckApiClient;
+use async_graphql::{
+    ComplexObject, Context, ErrorExtensions, Object, Result, ResultExt, SimpleObject,
+};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug)]
 #[graphql(complex)]

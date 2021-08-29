@@ -1,5 +1,5 @@
 use async_graphql::{InputValueError, InputValueResult, Scalar, ScalarType, Value};
-use chrono::{DateTime as ChronoDateTime, Date as ChronoDate, Utc, NaiveDate};
+use chrono::{Date as ChronoDate, DateTime as ChronoDateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 
 /// DateTime RFC3339
@@ -10,9 +10,9 @@ pub struct DateTime(pub ChronoDateTime<Utc>);
 impl ScalarType for DateTime {
     fn parse(value: Value) -> InputValueResult<Self> {
         if let Value::String(value) = &value {
-            Ok(DateTime(ChronoDateTime::from(ChronoDateTime::parse_from_rfc3339(
-                value.as_str(),
-            )?)))
+            Ok(DateTime(ChronoDateTime::from(
+                ChronoDateTime::parse_from_rfc3339(value.as_str())?,
+            )))
         } else {
             Err(InputValueError::expected_type(value))
         }
@@ -33,7 +33,7 @@ impl Clone for DateTime {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Date(pub NaiveDate);
 
-const DATE_FORMAT: &'static str ="%Y-%m-%d";
+const DATE_FORMAT: &'static str = "%Y-%m-%d";
 
 #[Scalar]
 impl ScalarType for Date {
