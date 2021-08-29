@@ -14,7 +14,7 @@ path = "src/main.rs"
 name = "teamdeck_tracker_api"
 
 [dependencies]
-async-graphql = "2.9.10"
+async-graphql = { version = "2.9.10", features = ["apollo_tracing"] }
 async-graphql-actix-web = "2.9.10"
 actix-web = "3"
 chrono = { version = "0.4.19", features = ["serde"] }

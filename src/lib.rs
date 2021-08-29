@@ -9,6 +9,7 @@ use crate::resource::ResourceQuery;
 use crate::teamdeck::api::TeamdeckApiClient;
 use crate::timer::{TimerMutation, TimerQuery, Timers};
 use async_graphql::{EmptySubscription, MergedObject, Schema};
+use async_graphql::extensions::ApolloTracing;
 
 pub type ApiSchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
 
@@ -26,5 +27,6 @@ pub fn create_schema() -> ApiSchema {
     )
     .data(TeamdeckApiClient::default())
     .data(Timers::default())
+        .extension(ApolloTracing)
     .finish()
 }

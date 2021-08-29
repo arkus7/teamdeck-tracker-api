@@ -372,6 +372,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "bytes 1.0.1",
+ "chrono",
  "fnv",
  "futures-util",
  "http",
