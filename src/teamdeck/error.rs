@@ -1,7 +1,8 @@
 use async_graphql::{ErrorExtensions, FieldError};
 use thiserror::Error;
+use serde::Deserialize;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Deserialize)]
 pub enum TeamdeckApiError {
     #[error("Could not find resource")]
     NotFound,

@@ -18,7 +18,7 @@ pub struct ResourceQuery;
 #[Object]
 impl ResourceQuery {
     #[tracing::instrument(name = "Fetching resource by id", skip(ctx))]
-    async fn resource(&self, ctx: &Context<'_>, resource_id: u64) -> Result<Resource> {
+    async fn resource(&self, ctx: &Context<'_>, resource_id: u64) -> Result<Option<Resource>> {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
         let resource = client.get_resource_by_id(resource_id).await.extend()?;
         Ok(resource)

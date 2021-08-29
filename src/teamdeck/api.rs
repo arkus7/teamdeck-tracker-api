@@ -2,13 +2,15 @@ use crate::project::Project;
 use crate::resource::Resource;
 use crate::teamdeck::error::TeamdeckApiError;
 use crate::time_entry::TimeEntry;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, NaiveDate};
 use reqwest;
 use reqwest::header::{HeaderMap, HeaderName};
 use reqwest::IntoUrl;
 use serde::Serialize;
 use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
+use std::collections::HashMap;
+use crate::scalars::DATE_FORMAT;
 
 const API_KEY_ENV_VARIABLE: &str = "TEAMDECK_API_KEY";
 const API_KEY_HEADER_NAME: &str = "X-Api-Key";
@@ -72,12 +74,13 @@ pub struct Page<S: Serialize> {
 
 impl TeamdeckApiClient {
     #[tracing::instrument(name = "Fetching resource by ID from Teamdeck API", skip(self), err)]
-    pub async fn get_resource_by_id(&self, id: u64) -> Result<Resource, TeamdeckApiError> {
-        let response = self
-            .get(format!("https://api.teamdeck.io/v1/resources/{}", id).as_str())
+    pub async fn get_resource_by_id(&self, resource_id: u64) -> Result<Option<Resource>, TeamdeckApiError> {
+        let resource = self
+            .get(format!("https://api.teamdeck.io/v1/resources/{}", resource_id).as_str())
             .send()
+            .await?
+            .json()
             .await?;
-        let resource = response.json().await?;
 
         Ok(resource)
     }
@@ -135,6 +138,20 @@ impl TeamdeckApiClient {
     pub async fn get_projects(&self) -> Result<Vec<Project>, TeamdeckApiError> {
         self.traverse_all_pages(|page| self.get_projects_page(page))
             .await
+    }
+
+    #[tracing::instrument(
+        name = "Fetching project by ID from Teamdeck API",
+        skip(self),
+        err
+    )]
+    pub async fn get_project_by_id(&self, project_id: u64) -> Result<Option<Project>, TeamdeckApiError> {
+        let project = self.get(format!("https://api.teamdeck.io/v1/projects/{}", project_id).as_str())
+            .send()
+            .await?
+            .json()
+            .await?;
+        Ok(Some(project))
     }
 
     #[tracing::instrument(
