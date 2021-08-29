@@ -162,7 +162,7 @@ impl TeamdeckApiClient {
     pub async fn get_time_entries(
         &self,
         resource_id: u64,
-        date: Option<DateTime<Utc>>,
+        date: Option<NaiveDate>,
     ) -> Result<Vec<TimeEntry>, TeamdeckApiError> {
         self.traverse_all_pages(|page| self.get_time_entries_page(resource_id, date, page))
             .await
@@ -172,16 +172,21 @@ impl TeamdeckApiClient {
     pub async fn get_time_entries_page(
         &self,
         resource_id: u64,
-        date: Option<DateTime<Utc>>,
+        date: Option<NaiveDate>,
         page: Option<u64>,
     ) -> Result<Page<TimeEntry>, TeamdeckApiError> {
+        let mut params = HashMap::new();
+        params.insert("resource_id", resource_id.to_string());
+        params.insert("page", page.unwrap_or(1).to_string());
+        params.insert("expand", "tags".to_string());
+
+        if let Some(date) = date {
+            params.insert("date", date.format(DATE_FORMAT).to_string());
+        }
+
         let response = self
             .get("https://api.teamdeck.io/v1/time-entries")
-            .query(&[
-                ("resource_id", resource_id.to_string()),
-                ("page", page.unwrap_or(1).to_string()),
-                ("expand", "tags".to_string()),
-            ])
+            .query(&params)
             .send()
             .await?;
 
