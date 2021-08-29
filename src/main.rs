@@ -6,7 +6,7 @@ use actix_web::{guard, web, App, HttpResponse, HttpServer, Result};
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql_actix_web::{Request, Response};
 use teamdeck_tracker_api::{create_schema, ApiSchema};
-use tracing_actix_web::{TracingLogger, TracingLoggerMiddleware};
+use tracing_actix_web::TracingLogger;
 
 async fn index(schema: web::Data<ApiSchema>, req: Request) -> Response {
     schema.execute(req.into_inner()).await.into()

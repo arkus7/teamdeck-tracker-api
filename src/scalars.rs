@@ -1,5 +1,5 @@
 use async_graphql::{InputValueError, InputValueResult, Scalar, ScalarType, Value};
-use chrono::{Date as ChronoDate, DateTime as ChronoDateTime, NaiveDate, Utc};
+use chrono::{DateTime as ChronoDateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 
 /// DateTime RFC3339

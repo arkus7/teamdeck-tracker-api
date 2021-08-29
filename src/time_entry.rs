@@ -1,9 +1,7 @@
 use crate::project::Project;
-use crate::scalars::{Date, DateTime};
+use crate::scalars::Date;
 use crate::teamdeck::api::TeamdeckApiClient;
-use async_graphql::{
-    ComplexObject, Context, ErrorExtensions, Object, Result, ResultExt, SimpleObject,
-};
+use async_graphql::{ComplexObject, Context, Object, Result, ResultExt, SimpleObject};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug)]
@@ -28,7 +26,7 @@ pub struct TimeEntry {
 #[ComplexObject]
 impl TimeEntry {
     async fn project(&self, ctx: &Context<'_>) -> Result<Option<Project>> {
-        let client = ctx.data_unchecked::<TeamdeckApiClient>();
+        let _client = ctx.data_unchecked::<TeamdeckApiClient>();
         Ok(None)
     }
 }
