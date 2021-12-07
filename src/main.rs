@@ -22,11 +22,12 @@ async fn index_playground() -> Result<HttpResponse> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    let port = std::env::var("PORT").ok().unwrap_or("8000".into());
     let logs_subscriber =
         get_logs_subscriber("TeamdeckTimerAPI".into(), "info".into(), std::io::stdout);
     init_logs_subscriber(logs_subscriber);
 
-    println!("Playground: http://localhost:8000");
+    // println!("Playground: http://localhost:8000");
 
     HttpServer::new(move || {
         App::new()
@@ -35,7 +36,7 @@ async fn main() -> std::io::Result<()> {
             .service(web::resource("/").guard(guard::Post()).to(index))
             .service(web::resource("/").guard(guard::Get()).to(index_playground))
     })
-    .bind("127.0.0.1:8000")?
+    .bind(format!("0.0.0.0:{}", port))?
     .run()
     .await
 }
