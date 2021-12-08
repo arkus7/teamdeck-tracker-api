@@ -3,6 +3,7 @@ use crate::resource::Resource;
 use crate::scalars::{Date, DATE_FORMAT};
 use crate::teamdeck::error::TeamdeckApiError;
 use crate::time_entry::{CreateTimeEntryInput, TimeEntry};
+use crate::time_entry_tag::TimeEntryTag;
 use chrono::{DateTime, NaiveDate, Utc};
 use reqwest;
 use reqwest::header::{HeaderMap, HeaderName};
@@ -240,6 +241,68 @@ impl TeamdeckApiClient {
             items: time_entries,
             pagination,
         })
+    }
+
+    #[tracing::instrument(
+        name = "Fetching time entry tags page from Teamdeck API",
+        skip(self),
+        err
+    )]
+    pub async fn get_time_entry_tags_page(
+        &self,
+        page: Option<u64>,
+    ) -> Result<Page<TimeEntryTag>, TeamdeckApiError> {
+        let mut params = HashMap::new();
+        params.insert("page", page.unwrap_or(1).to_string());
+
+        let response = self
+            .get("https://api.teamdeck.io/v1/time-entry-tags")
+            .query(&params)
+            .send()
+            .await?;
+
+        let headers = response.headers();
+        let pagination = TeamdeckApiClient::read_pagination_info(&headers)?;
+
+        let time_entries = response.json().await?;
+
+        Ok(Page {
+            items: time_entries,
+            pagination,
+        })
+    }
+
+    #[tracing::instrument(
+        name = "Fetching all time entry tags from Teamdeck API",
+        skip(self),
+        err
+    )]
+    pub async fn get_time_entry_tags(&self) -> Result<Vec<TimeEntryTag>, TeamdeckApiError> {
+        self.traverse_all_pages(|page| self.get_time_entry_tags_page(page))
+            .await
+    }
+
+    #[tracing::instrument(
+        name = "Fetching time entry tag by ID from Teamdeck API",
+        skip(self),
+        err
+    )]
+    pub async fn get_time_entry_tag(
+        &self,
+        tag_id: u64,
+    ) -> Result<Option<TimeEntryTag>, TeamdeckApiError> {
+        let tag = self
+            .get(format!("https://api.teamdeck.io/v1/time-entry-tags/{}", tag_id).as_str())
+            .send()
+            .await?
+            .text()
+            // .json()
+            .await?;
+
+            println!("{}",&tag);
+
+            serde_json::from_str(&tag).map_err(|e| TeamdeckApiError::ServerError(e.to_string()))
+        // Ok(Some(tag))
     }
 
     #[tracing::instrument(name = "Create new time entry via Teamdeck API", skip(self), err)]
