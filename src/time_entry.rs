@@ -3,6 +3,7 @@ use crate::resource::Resource;
 use crate::scalars::{Date, DateTime, Time};
 use crate::teamdeck::api::{CreateTimeEntryBody, TeamdeckApiClient};
 use crate::teamdeck::error::TeamdeckApiError;
+use crate::time_entry_tag::TimeEntryTag;
 use async_graphql::{ComplexObject, Context, InputObject, Object, Result, ResultExt, SimpleObject};
 use chrono::{Duration, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
@@ -47,14 +48,6 @@ impl TimeEntry {
         let hours = (duration_in_seconds / 60) / 60;
         Ok(format!("{}:{:02}", hours, minutes))
     }
-}
-
-#[derive(Serialize, Deserialize, SimpleObject, Debug)]
-pub struct TimeEntryTag {
-    id: u64,
-    name: String,
-    icon: String,
-    color: String,
 }
 
 #[derive(Default, Debug)]
