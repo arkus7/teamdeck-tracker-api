@@ -1,11 +1,10 @@
 use crate::project::Project;
 use crate::resource::Resource;
-use crate::scalars::{Date, DateTime, Time};
+use crate::scalars::{Date, Time};
 use crate::teamdeck::api::{CreateTimeEntryBody, TeamdeckApiClient};
-use crate::teamdeck::error::TeamdeckApiError;
 use crate::time_entry_tag::TimeEntryTag;
 use async_graphql::{ComplexObject, Context, InputObject, Object, Result, ResultExt, SimpleObject};
-use chrono::{Duration, NaiveDate, Utc};
+use chrono::{Duration};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug)]

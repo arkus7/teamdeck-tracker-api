@@ -25,7 +25,7 @@ impl ScalarType for DateTime {
 
 impl Clone for DateTime {
     fn clone(&self) -> Self {
-        Self(self.0.clone())
+        Self(self.0)
     }
 }
 
@@ -33,7 +33,7 @@ impl Clone for DateTime {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Date(pub NaiveDate);
 
-pub const DATE_FORMAT: &'static str = "%Y-%m-%d";
+pub const DATE_FORMAT: & str = "%Y-%m-%d";
 
 #[Scalar]
 impl ScalarType for Date {
@@ -52,7 +52,7 @@ impl ScalarType for Date {
 
 impl Clone for Date {
     fn clone(&self) -> Self {
-        Self(self.0.clone())
+        Self(self.0)
     }
 }
 
@@ -60,7 +60,7 @@ impl Clone for Date {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Time(pub NaiveTime);
 
-const TIME_FORMAT: &'static str = "%H:%M";
+const TIME_FORMAT: &str = "%H:%M";
 
 #[Scalar]
 impl ScalarType for Time {
@@ -89,6 +89,6 @@ impl Time {
 
 impl Clone for Time {
     fn clone(&self) -> Self {
-        Self(self.0.clone())
+        Self(self.0)
     }
 }

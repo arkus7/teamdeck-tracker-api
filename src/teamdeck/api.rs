@@ -4,7 +4,7 @@ use crate::scalars::{Date, DATE_FORMAT};
 use crate::teamdeck::error::TeamdeckApiError;
 use crate::time_entry::{CreateTimeEntryInput, TimeEntry};
 use crate::time_entry_tag::TimeEntryTag;
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{NaiveDate, Utc};
 use reqwest;
 use reqwest::header::{HeaderMap, HeaderName};
 use reqwest::IntoUrl;
@@ -24,7 +24,7 @@ impl TeamdeckApiClient {
     fn from_env() -> Self {
         Self {
             api_key: std::env::var(API_KEY_ENV_VARIABLE)
-                .expect(format!("Missing {} env variable", API_KEY_ENV_VARIABLE).as_str()),
+                .unwrap_or_else(|_| panic!("Missing {} env variable", API_KEY_ENV_VARIABLE)),
         }
     }
 }
@@ -48,14 +48,14 @@ impl Display for PaginationHeader {
     }
 }
 
-impl Into<HeaderName> for PaginationHeader {
-    fn into(self) -> HeaderName {
-        match self {
-            PaginationHeader::TotalCount => HeaderName::from_static("x-pagination-total-count"),
-            PaginationHeader::CurrentPage => HeaderName::from_static("x-pagination-current-page"),
-            PaginationHeader::ItemsPerPage => HeaderName::from_static("x-pagination-per-page"),
-            PaginationHeader::PagesCount => HeaderName::from_static("x-pagination-page-count"),
-        }
+impl From<PaginationHeader> for HeaderName {
+    fn from(header: PaginationHeader) -> Self {
+        match header {
+                      PaginationHeader::TotalCount => HeaderName::from_static("x-pagination-total-count"),
+                      PaginationHeader::CurrentPage => HeaderName::from_static("x-pagination-current-page"),
+                      PaginationHeader::ItemsPerPage => HeaderName::from_static("x-pagination-per-page"),
+                      PaginationHeader::PagesCount => HeaderName::from_static("x-pagination-page-count"),
+                  }
     }
 }
 
@@ -94,7 +94,7 @@ impl CreateTimeEntryBody {
         date: Option<Date>,
         minutes: u64,
     ) -> Self {
-        let date = date.unwrap_or(Date(Utc::today().naive_utc())).0;
+        let date = date.unwrap_or_else(|| Date(Utc::today().naive_utc())).0;
         CreateTimeEntryBody {
             resource_id: input.resource_id,
             project_id: input.project_id,
@@ -233,7 +233,7 @@ impl TeamdeckApiClient {
             .await?;
 
         let headers = response.headers();
-        let pagination = TeamdeckApiClient::read_pagination_info(&headers)?;
+        let pagination = TeamdeckApiClient::read_pagination_info(headers)?;
 
         let time_entries = response.json().await?;
 
@@ -262,7 +262,7 @@ impl TeamdeckApiClient {
             .await?;
 
         let headers = response.headers();
-        let pagination = TeamdeckApiClient::read_pagination_info(&headers)?;
+        let pagination = TeamdeckApiClient::read_pagination_info(headers)?;
 
         let time_entries = response.json().await?;
 
@@ -367,7 +367,7 @@ impl TeamdeckApiClient {
     ) -> Result<u64, TeamdeckApiError> {
         let header_value = headers
             .get(&header)
-            .ok_or(TeamdeckApiError::ServerError(format!(
+            .ok_or_else(|| TeamdeckApiError::ServerError(format!(
                 "Missing {} header value in response",
                 &header
             )));
@@ -400,7 +400,7 @@ impl TeamdeckApiClient {
         let mut total_pages: u64 = 1;
 
         while current_page != total_pages {
-            current_page = current_page + 1;
+            current_page +=  1;
             let page = f(Some(current_page)).await?;
             items.extend(page.items);
             total_pages = page.pagination.pages_count;
