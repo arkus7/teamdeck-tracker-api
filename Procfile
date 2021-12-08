@@ -1,2 +1,2 @@
-web: ./target/release/teamdeck-tracker-api
+web: ./target/release/teamdeck_tracker_api
 
