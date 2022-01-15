@@ -4,7 +4,7 @@ use crate::scalars::{Date, Time};
 use crate::teamdeck::api::{CreateTimeEntryBody, TeamdeckApiClient};
 use crate::time_entry_tag::TimeEntryTag;
 use async_graphql::{ComplexObject, Context, InputObject, Object, Result, ResultExt, SimpleObject};
-use chrono::{Duration};
+use chrono::Duration;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug)]

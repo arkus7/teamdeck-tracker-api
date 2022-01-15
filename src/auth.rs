@@ -1,8 +1,7 @@
 use async_graphql::{Context, Object, Result, SimpleObject};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 mod google {
-    use async_graphql::SimpleObject;
     use serde::Deserialize;
     use thiserror::Error;
 
@@ -50,9 +49,8 @@ mod google {
                 None => return Err(GoogleAuthError::IdTokenMissing),
             };
 
-            let token_data =
-                jsonwebtoken::dangerous_insecure_decode::<GoogleTokenClaims>(&id_token)
-                    .map_err(|e| GoogleAuthError::TokenDecodeError { source: e })?;
+            let token_data = jsonwebtoken::dangerous_insecure_decode::<GoogleTokenClaims>(id_token)
+                .map_err(|e| GoogleAuthError::TokenDecodeError { source: e })?;
             let claims = token_data.claims;
 
             if !claims.email_verified {
@@ -115,7 +113,7 @@ mod google {
                 .json()
                 .await?;
 
-            return Ok(response);
+            Ok(response)
         }
     }
 }
@@ -148,10 +146,10 @@ impl AuthMutation {
         dbg!(&google_token);
         let email = google_token.email()?;
         let token = Token {
-            access_token: email,
+            access_token: "".to_string(),
             refresh_token: "".to_string(),
             expires_in: 0,
         };
-        return Ok(token);
+        Ok(token)
     }
 }
