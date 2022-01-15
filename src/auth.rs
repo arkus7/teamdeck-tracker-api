@@ -71,12 +71,17 @@ mod google {
     pub struct GoogleOAuth2;
 
     impl GoogleOAuth2 {
+        // NOTE: Done this way in order to not being required to store
+        // Google credentials on the clients. They simply ask for the URL
+        // where they should redirect the user
         pub fn get_login_url() -> String {
             let base_url = OAUTH2_URL;
             let client_id = std::env::var("GOOGLE_OAUTH2_CLIENT_ID").unwrap();
+            // TODO: Add redirect_uri to env variables
             let redirect_uri = "http://localhost:8000/google/redirect";
             let scope = USER_INFO_EMAIL_SCOPE;
             let response_type = RESPONSE_TYPE_CODE;
+            // TODO: Do we need refresh tokens at all?
             let access_type = ACCESS_TYPE_OFFLINE;
 
             format!(
@@ -88,6 +93,8 @@ mod google {
         pub async fn exchange_code_for_token(
             code: String,
         ) -> Result<GoogleTokenResponse, Box<dyn std::error::Error>> {
+            // FIXME: Don't use Box<dyn Error>, replace with something better
+            // TODO: Refactor params, maybe introduce struct?
             let params = [
                 (
                     "client_id",
@@ -143,8 +150,13 @@ struct Token {
 impl AuthMutation {
     async fn login_with_google(&self, ctx: &Context<'_>, code: String) -> Result<Token> {
         let google_token = google::GoogleOAuth2::exchange_code_for_token(code).await?;
+
         dbg!(&google_token);
         let email = google_token.email()?;
+
+        // TODO: Fetch `resource_id` from Teamdeck API for that email
+        // TODO: Implement creating new token based on `email` and `resource_id`
+
         let token = Token {
             access_token: "".to_string(),
             refresh_token: "".to_string(),

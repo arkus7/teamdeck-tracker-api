@@ -27,6 +27,7 @@ struct GoogleSignInQuery {
 }
 
 async fn google_signin_redirect(query: web::Query<GoogleSignInQuery>) -> Result<HttpResponse> {
+    // TODO: Add some HTML template for displaying the code in more user friendly way
     Ok(HttpResponse::Ok().body(serde_json::to_string(&query.0)?))
 }
 
