@@ -3,3 +3,5 @@
 .env
 /.DS_Store
 /.idea/aws.xml
+
+client_secret_*.json
