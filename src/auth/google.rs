@@ -124,9 +124,7 @@ impl GoogleOAuth2 {
 
     pub async fn exchange_code_for_token(
         code: String,
-    ) -> Result<GoogleTokenResponse, Box<dyn std::error::Error>> {
-        // FIXME: Don't use Box<dyn Error>, replace with something better
-
+    ) -> Result<GoogleTokenResponse, reqwest::Error> {
         let params = ExchangeCodeForTokenParams {
             client_id: GoogleOAuthConfig::client_id(),
             client_secret: GoogleOAuthConfig::client_secret(),
