@@ -28,7 +28,7 @@ impl GoogleOAuthConfig {
 pub enum GoogleAuthError {
     #[error("decoding error")]
     TokenDecodeError { source: jsonwebtoken::errors::Error },
-    #[error("received token from Google did not include `id_token` field")]
+    #[error("received token from Google did not include `id_token` field, is your authorization code fresh?")]
     IdTokenMissing,
     #[error("email `{0}` is not verified")]
     EmailNotVerified(String),
