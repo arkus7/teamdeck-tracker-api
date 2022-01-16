@@ -2,9 +2,9 @@ use crate::teamdeck::api::TeamdeckApiClient;
 use async_graphql::{Context, Object, Result, ResultExt, SimpleObject};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, SimpleObject, Debug)]
+#[derive(Serialize, Deserialize, SimpleObject, Debug, Clone)]
 pub struct Resource {
-    id: u64,
+    pub id: u64,
     name: String,
     active: bool,
     avatar: Option<String>,
