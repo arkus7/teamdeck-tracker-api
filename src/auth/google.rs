@@ -59,7 +59,7 @@ pub struct GoogleTokenResponse {
 }
 
 #[derive(Deserialize)]
-struct GoogleTokenClaims {
+struct GoogleIdTokenClaims {
     email: String,
     email_verified: bool,
     #[serde(rename(deserialize = "hd"))]
@@ -73,7 +73,7 @@ impl GoogleTokenResponse {
             None => return Err(GoogleAuthError::IdTokenMissing),
         };
 
-        let token_data = jsonwebtoken::dangerous_insecure_decode::<GoogleTokenClaims>(id_token)
+        let token_data = jsonwebtoken::dangerous_insecure_decode::<GoogleIdTokenClaims>(id_token)
             .map_err(|e| GoogleAuthError::TokenDecodeError { source: e })?;
         let claims = token_data.claims;
 
