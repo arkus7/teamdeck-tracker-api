@@ -7,6 +7,22 @@ const RESPONSE_TYPE_CODE: &str = "code";
 const ACCESS_TYPE_ONLINE: &str = "online";
 const EXPECTED_DOMAIN: &str = "moodup.team";
 
+struct GoogleOAuthConfig;
+
+impl GoogleOAuthConfig {
+    fn redirect_uri() -> String {
+        std::env::var("GOOGLE_OAUTH2_REDIRECT_URI").unwrap()
+    }
+
+    fn client_secret() -> String {
+        std::env::var("GOOGLE_OAUTH2_CLIENT_SECRET").unwrap()
+    }
+
+    fn client_id() -> String {
+        std::env::var("GOOGLE_OAUTH2_CLIENT_ID").unwrap()
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum GoogleAuthError {
     #[error("decoding error")]
@@ -92,9 +108,9 @@ impl GoogleOAuth2 {
     // where they should redirect the user
     pub fn get_login_url() -> String {
         let base_url = OAUTH2_URL;
-        let client_id = std::env::var("GOOGLE_OAUTH2_CLIENT_ID").unwrap();
-        // TODO: Add redirect_uri to env variables
-        let redirect_uri = "http://localhost:8000/google/redirect";
+        let client_id = GoogleOAuthConfig::client_id();
+        let redirect_uri = GoogleOAuthConfig::redirect_uri();
+
         let scope = USER_INFO_EMAIL_SCOPE;
         let response_type = RESPONSE_TYPE_CODE;
         let access_type = ACCESS_TYPE_ONLINE;
@@ -111,13 +127,12 @@ impl GoogleOAuth2 {
         // FIXME: Don't use Box<dyn Error>, replace with something better
 
         let params = ExchangeCodeForTokenParams {
-            client_id: std::env::var("GOOGLE_OAUTH2_CLIENT_ID").unwrap(),
-            client_secret: std::env::var("GOOGLE_OAUTH2_CLIENT_SECRET").unwrap(),
+            client_id: GoogleOAuthConfig::client_id(),
+            client_secret: GoogleOAuthConfig::client_secret(),
+            redirect_uri: GoogleOAuthConfig::redirect_uri(),
             code,
             // TODO: move authorization code to const?
             grant_type: "authorization_code".to_string(),
-            // TODO: get redirect url from env variable
-            redirect_uri: "http://localhost:8000/google/redirect".to_string(),
         };
 
         let response = reqwest::Client::new()
