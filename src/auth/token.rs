@@ -33,7 +33,7 @@ trait Token {
             .map_err(|e| TokenError::EncodingError { source: e })
     }
 
-    fn verify(token_str: &str) -> Result<Claims, TokenError> {
+    fn decode_claims(token_str: &str) -> Result<Claims, TokenError> {
         let token = token_str.to_string();
         let secret = Self::secret();
         let decoding_key = DecodingKey::from_secret(secret.as_bytes());
@@ -50,7 +50,8 @@ trait Token {
     }
 }
 
-struct AccessToken(Claims);
+#[derive(Debug)]
+pub struct AccessToken(Claims);
 impl Token for AccessToken {
     fn secret() -> String {
         std::env::var("JWT_ACCESS_TOKEN_SECRET").unwrap()
@@ -64,6 +65,16 @@ impl Token for AccessToken {
 impl AccessToken {
     fn encode(&self) -> Result<String, TokenError> {
         Self::encode_claims(&self.0)
+    }
+
+    pub fn verify(token_str: &str) -> Result<AccessToken, TokenError> {
+        let claims = Self::decode_claims(token_str)?;
+
+        Ok(Self(claims))
+    }
+
+    pub fn resource_id(&self) -> u64 {
+        self.0.resource_id
     }
 }
 

@@ -1,5 +1,5 @@
 mod google;
-mod token;
+pub mod token;
 
 use async_graphql::{Context, Object, Result};
 
