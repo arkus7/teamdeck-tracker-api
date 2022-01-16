@@ -4,7 +4,7 @@ use thiserror::Error;
 const USER_INFO_EMAIL_SCOPE: &str = "https://www.googleapis.com/auth/userinfo.email";
 const OAUTH2_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 const RESPONSE_TYPE_CODE: &str = "code";
-const ACCESS_TYPE_OFFLINE: &str = "offline";
+const ACCESS_TYPE_ONLINE: &str = "online";
 const EXPECTED_DOMAIN: &str = "moodup.team";
 
 #[derive(Error, Debug)]
@@ -97,8 +97,7 @@ impl GoogleOAuth2 {
         let redirect_uri = "http://localhost:8000/google/redirect";
         let scope = USER_INFO_EMAIL_SCOPE;
         let response_type = RESPONSE_TYPE_CODE;
-        // TODO: Do we need refresh tokens at all?
-        let access_type = ACCESS_TYPE_OFFLINE;
+        let access_type = ACCESS_TYPE_ONLINE;
 
         format!(
             "{}?client_id={}&redirect_uri={}&scope={}&response_type={}&access_type={}",
