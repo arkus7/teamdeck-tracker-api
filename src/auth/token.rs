@@ -5,6 +5,14 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+#[derive(Debug, Error)]
+pub enum TokenError {
+    #[error("error while encoding token")]
+    EncodingError { source: jsonwebtoken::errors::Error },
+    #[error("error while decoding token")]
+    DecodingError { source: jsonwebtoken::errors::Error },
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Claims {
     sub: String,
@@ -77,14 +85,6 @@ pub struct TokenResponse {
     access_token: String,
     refresh_token: String,
     expires_in: u64,
-}
-
-#[derive(Debug, Error)]
-pub enum TokenError {
-    #[error("error while encoding token")]
-    EncodingError { source: jsonwebtoken::errors::Error },
-    #[error("error while decoding token")]
-    DecodingError { source: jsonwebtoken::errors::Error },
 }
 
 impl TokenResponse {

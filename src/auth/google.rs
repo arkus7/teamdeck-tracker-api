@@ -19,6 +19,23 @@ pub enum GoogleAuthError {
     InvalidDomain { expected: String, found: String },
 }
 
+/// Struct representing response from Google OAuth2 API
+/// after exchanging authorization code for token.
+///
+/// Available fields:
+///     - `access_token` (String)
+///         The token that your application sends to authorize a Google API request.
+///     - `expires_in` (u64)
+///         The remaining lifetime of the access token in seconds.
+///     - `refresh_token` (Option<String>)
+///         A token that you can use to obtain a new access token.
+///         Refresh tokens are valid until the user revokes access.
+///         Again, this field is only present in this response if you set the
+///         access_type parameter to `offline` in the initial request to Google's authorization server.
+///     - `scope` (String)
+///         The scopes of access granted by the access_token expressed as a list of space-delimited, case-sensitive strings.
+///     - `token_type` (String)
+///         The type of token returned. At this time, this field's value is always set to `Bearer`.
 #[derive(Deserialize, Debug)]
 pub struct GoogleTokenResponse {
     id_token: Option<String>,
