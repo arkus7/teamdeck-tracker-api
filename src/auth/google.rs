@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 const USER_INFO_EMAIL_SCOPE: &str = "https://www.googleapis.com/auth/userinfo.email";
@@ -75,6 +75,15 @@ impl GoogleTokenResponse {
     }
 }
 
+#[derive(Debug, Serialize)]
+struct ExchangeCodeForTokenParams {
+    client_id: String,
+    client_secret: String,
+    code: String,
+    grant_type: String,
+    redirect_uri: String,
+}
+
 pub struct GoogleOAuth2;
 
 impl GoogleOAuth2 {
@@ -101,23 +110,16 @@ impl GoogleOAuth2 {
         code: String,
     ) -> Result<GoogleTokenResponse, Box<dyn std::error::Error>> {
         // FIXME: Don't use Box<dyn Error>, replace with something better
-        // TODO: Refactor params, maybe introduce struct?
-        let params = [
-            (
-                "client_id",
-                std::env::var("GOOGLE_OAUTH2_CLIENT_ID").unwrap(),
-            ),
-            (
-                "client_secret",
-                std::env::var("GOOGLE_OAUTH2_CLIENT_SECRET").unwrap(),
-            ),
-            ("code", code),
-            ("grant_type", "authorization_code".to_string()),
-            (
-                "redirect_uri",
-                "http://localhost:8000/google/redirect".to_string(),
-            ),
-        ];
+
+        let params = ExchangeCodeForTokenParams {
+            client_id: std::env::var("GOOGLE_OAUTH2_CLIENT_ID").unwrap(),
+            client_secret: std::env::var("GOOGLE_OAUTH2_CLIENT_SECRET").unwrap(),
+            code,
+            // TODO: move authorization code to const?
+            grant_type: "authorization_code".to_string(),
+            // TODO: get redirect url from env variable
+            redirect_uri: "http://localhost:8000/google/redirect".to_string(),
+        };
 
         let response = reqwest::Client::new()
             .post("https://oauth2.googleapis.com/token")
