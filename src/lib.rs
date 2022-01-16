@@ -1,4 +1,4 @@
-mod auth;
+pub mod auth;
 mod project;
 mod resource;
 mod scalars;
