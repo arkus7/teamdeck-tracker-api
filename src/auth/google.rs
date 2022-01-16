@@ -6,6 +6,7 @@ const OAUTH2_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 const RESPONSE_TYPE_CODE: &str = "code";
 const ACCESS_TYPE_ONLINE: &str = "online";
 const EXPECTED_DOMAIN: &str = "moodup.team";
+const GRANT_TYPE_AUTHORIZATION_CODE: &str = "authorization_code";
 
 struct GoogleOAuthConfig;
 
@@ -129,10 +130,9 @@ impl GoogleOAuth2 {
         let params = ExchangeCodeForTokenParams {
             client_id: GoogleOAuthConfig::client_id(),
             client_secret: GoogleOAuthConfig::client_secret(),
+            grant_type: GRANT_TYPE_AUTHORIZATION_CODE.to_string(),
             redirect_uri: GoogleOAuthConfig::redirect_uri(),
             code,
-            // TODO: move authorization code to const?
-            grant_type: "authorization_code".to_string(),
         };
 
         let response = reqwest::Client::new()
