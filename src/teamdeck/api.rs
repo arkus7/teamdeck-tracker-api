@@ -1,5 +1,5 @@
 use crate::project::Project;
-use crate::resource::Resource;
+use crate::resource::{self, Resource};
 use crate::scalars::{Date, DATE_FORMAT};
 use crate::teamdeck::error::TeamdeckApiError;
 use crate::time_entry::{CreateTimeEntryInput, TimeEntry};
@@ -112,6 +112,22 @@ impl CreateTimeEntryBody {
 }
 
 impl TeamdeckApiClient {
+    #[tracing::instrument(name = "Fetching resource by email from Teamdeck API", skip(self), err)]
+    pub async fn get_resource_by_email(
+        &self,
+        email: &str,
+    ) -> Result<Option<Resource>, TeamdeckApiError> {
+        let resources: Vec<Resource> = self
+            .get(format!("https://api.teamdeck.io/v1/resources?email={}", email).as_str())
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        let resource = resources.first();
+        Ok(resource.cloned())
+    }
+
     #[tracing::instrument(name = "Fetching resource by ID from Teamdeck API", skip(self), err)]
     pub async fn get_resource_by_id(
         &self,
