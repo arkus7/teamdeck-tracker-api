@@ -128,22 +128,82 @@ mod google {
 }
 
 mod token {
+    use std::time::{SystemTime, Duration};
+
     use async_graphql::SimpleObject;
-    use jsonwebtoken::{encode, EncodingKey, Header};
+    use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
     use serde::{Deserialize, Serialize};
     use thiserror::Error;
 
-    const JWT_ACCESS_TOKEN_SECRET: &str = "secret";
-    const JWT_REFRESH_TOKEN_SECRET: &str = "secret";
-
-    #[derive(Debug, Serialize, Deserialize)]
+    #[derive(Debug, Serialize, Deserialize, Clone)]
     struct Claims {
         sub: String,
+        iat: u64,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        exp: Option<u64>,
         resource_id: u64,
     }
 
+    trait Token {
+        fn secret() -> String;
+
+        fn encode_claims(claims: &Claims) -> Result<String, TokenError> {
+            let headers = Header::default();
+            let encoding_key = EncodingKey::from_secret(Self::secret().as_bytes());
+
+            encode(&headers, &claims, &encoding_key)
+                .map_err(|e| TokenError::EncodingError { source: e })
+        }
+
+        fn verify(token_str: &str) -> Result<Claims, TokenError> {
+            let token = token_str.to_string();
+            let secret = Self::secret();
+            let decoding_key = DecodingKey::from_secret(secret.as_bytes());
+            let validation = Validation::default();
+
+            let token_data = decode::<Claims>(&token, &decoding_key, &validation)
+                .map_err(|e| TokenError::DecodingError { source: e })?;
+
+            Ok(token_data.claims)
+        }
+
+        fn expiration_time() -> Option<Duration> {
+            None
+        }
+    }
+
+    struct AccessToken(Claims);
+    impl Token for AccessToken {
+        fn secret() -> String {
+            std::env::var("JWT_ACCESS_TOKEN_SECRET").unwrap()
+        }
+
+        fn expiration_time() -> Option<Duration> {
+            Some(Duration::from_secs(60 * 60 * 24))
+        }
+    }
+
+    impl AccessToken {
+        fn encode(&self) -> Result<String, TokenError> {
+            Self::encode_claims(&self.0)
+        }
+    }
+
+    struct RefreshToken(Claims);
+    impl Token for RefreshToken {
+        fn secret() -> String {
+            std::env::var("JWT_REFRESH_TOKEN_SECRET").unwrap()
+        }
+    }
+
+    impl RefreshToken {
+        fn encode(&self) -> Result<String, TokenError> {
+            Self::encode_claims(&self.0)
+        }
+    }
+
     #[derive(SimpleObject, Debug, Serialize)]
-    pub struct Token {
+    pub struct TokenResponse {
         access_token: String,
         refresh_token: String,
         expires_in: u64,
@@ -153,28 +213,34 @@ mod token {
     pub enum TokenError {
         #[error("unknown error occured during token creation")]
         Unknown,
+        #[error("error while encoding token")]
+        EncodingError { source: jsonwebtoken::errors::Error },
+        #[error("error while decoding token")]
+        DecodingError { source: jsonwebtoken::errors::Error },
     }
 
-    impl Token {
+    impl TokenResponse {
         pub fn with_user_data(email: &str, resource_id: u64) -> Result<Self, TokenError> {
-            let claims = Claims {
+            let issued_at = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap();
+            let expires_in = AccessToken::expiration_time().unwrap_or_default();
+            let access_token_claims = Claims {
                 sub: email.to_string(),
+                iat: issued_at.as_secs(),
+                exp: Some((issued_at + expires_in).as_secs()),
                 resource_id,
             };
+            let refresh_token_claims = Claims {
+                exp: None,
+                ..access_token_claims.clone()
+            };
 
-            let headers = Header::default();
-            let access_token_key = EncodingKey::from_secret(JWT_ACCESS_TOKEN_SECRET.as_ref());
-            let refresh_token_key = EncodingKey::from_secret(JWT_REFRESH_TOKEN_SECRET.as_ref());
+            let access_token = AccessToken(access_token_claims).encode()?;
+            let refresh_token = RefreshToken(refresh_token_claims).encode()?;
 
-            let access_token =
-                encode(&headers, &claims, &access_token_key).map_err(|e| TokenError::Unknown)?;
-            let refresh_token =
-                encode(&headers, &claims, &refresh_token_key).map_err(|e| TokenError::Unknown)?;
-
-            Ok(Token {
+            Ok(TokenResponse {
                 access_token,
                 refresh_token,
-                expires_in: 0,
+                expires_in,
             })
         }
     }
@@ -196,21 +262,25 @@ pub struct AuthMutation;
 
 #[Object]
 impl AuthMutation {
-    async fn login_with_google(&self, ctx: &Context<'_>, code: String) -> Result<token::Token> {
+    async fn login_with_google(
+        &self,
+        ctx: &Context<'_>,
+        code: String,
+    ) -> Result<token::TokenResponse> {
         let google_token = google::GoogleOAuth2::exchange_code_for_token(code).await?;
-
-        dbg!(&google_token);
         let email = google_token.email()?;
 
-        // TODO: Fetch `resource_id` from Teamdeck API for that email
-        let teamdeck = ctx.data_unchecked::<TeamdeckApiClient>();
-        let resource = teamdeck.get_resource_by_email(&email).await?;
+        let teamdeck_api = ctx.data_unchecked::<TeamdeckApiClient>();
+        let resource = teamdeck_api.get_resource_by_email(&email).await?;
 
         if let Some(resource) = resource {
-            let token = token::Token::with_user_data(&email, resource.id)?;
+            let token = token::TokenResponse::with_user_data(&email, resource.id)?;
             Ok(token)
         } else {
-            Err(async_graphql::Error::new(format!("No Teamdeck account found with `{}` email", email)))
+            Err(async_graphql::Error::new(format!(
+                "No Teamdeck account found with `{}` email",
+                email
+            )))
         }
     }
 }
