@@ -81,8 +81,6 @@ pub struct TokenResponse {
 
 #[derive(Debug, Error)]
 pub enum TokenError {
-    #[error("unknown error occured during token creation")]
-    Unknown,
     #[error("error while encoding token")]
     EncodingError { source: jsonwebtoken::errors::Error },
     #[error("error while decoding token")]
