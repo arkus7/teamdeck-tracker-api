@@ -3,7 +3,7 @@ mod telemetry;
 use crate::telemetry::{get_logs_subscriber, init_logs_subscriber};
 
 use actix_web::web::Data;
-use actix_web::{guard, web, App, HttpMessage, HttpRequest, HttpResponse, HttpServer, Result};
+use actix_web::{HttpMessage, guard, web, App, HttpRequest, HttpResponse, HttpServer, Result};
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql_actix_web::{Request, Response};
 use reqwest::header::AUTHORIZATION;

@@ -25,7 +25,7 @@ impl From<reqwest::Error> for TeamdeckApiError {
 }
 
 impl ErrorExtensions for TeamdeckApiError {
-    fn extend(self) -> FieldError {
+    fn extend(&self) -> FieldError {
         self.extend_with(|err, e| match err {
             TeamdeckApiError::NotFound => e.set("code", "NOT_FOUND"),
             TeamdeckApiError::ServerError(reason) => e.set("reason", reason.to_string()),
