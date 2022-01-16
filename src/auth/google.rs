@@ -21,17 +21,11 @@ pub enum GoogleAuthError {
 
 #[derive(Deserialize, Debug)]
 pub struct GoogleTokenResponse {
-    access_token: String,
-    refresh_token: Option<String>,
-    expires_in: u64,
     id_token: Option<String>,
-    scope: String,
-    token_type: String,
 }
 
 #[derive(Deserialize)]
 struct GoogleTokenClaims {
-    sub: String,
     email: String,
     email_verified: bool,
     #[serde(rename(deserialize = "hd"))]

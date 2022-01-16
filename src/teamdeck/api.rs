@@ -1,5 +1,5 @@
 use crate::project::Project;
-use crate::resource::{self, Resource};
+use crate::resource::Resource;
 use crate::scalars::{Date, DATE_FORMAT};
 use crate::teamdeck::error::TeamdeckApiError;
 use crate::time_entry::{CreateTimeEntryInput, TimeEntry};
