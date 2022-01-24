@@ -1,17 +1,38 @@
 mod telemetry;
 
 use crate::telemetry::{get_logs_subscriber, init_logs_subscriber};
+
 use actix_web::web::Data;
-use actix_web::{guard, web, App, HttpResponse, HttpServer, Result};
+use actix_web::{HttpMessage, guard, web, App, HttpRequest, HttpResponse, HttpServer, Result};
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql_actix_web::{Request, Response};
+use reqwest::header::AUTHORIZATION;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use teamdeck_tracker_api::{create_schema, ApiSchema};
+use teamdeck_tracker_api::{auth::token::AccessToken, create_schema, ApiSchema};
 use tracing_actix_web::TracingLogger;
 
-async fn index(schema: web::Data<ApiSchema>, req: Request) -> Response {
-    schema.execute(req.into_inner()).await.into()
+async fn index(schema: web::Data<ApiSchema>, req: Request, http_req: HttpRequest) -> Response {
+    let mut query: async_graphql::Request = req.into_inner();
+
+    let auth_token = dbg!(get_token(http_req));
+    let access_token = dbg!(auth_token.map(|t| AccessToken::verify(&t).ok()).flatten());
+
+    if let Some(token) = access_token {
+        query = query.data(token);
+    }
+
+    schema.execute(query).await.into()
+}
+
+fn get_token(req: HttpRequest) -> Option<String> {
+    let authorization_header = req.headers().get(AUTHORIZATION);
+    if let Some(value) = authorization_header {
+        let contents = value.to_str().unwrap_or("");
+        let token = contents.split_whitespace().last().map(|t| t.to_string());
+        token
+    } else {
+        None
+    }
 }
 
 async fn index_playground() -> Result<HttpResponse> {
@@ -24,30 +45,12 @@ async fn index_playground() -> Result<HttpResponse> {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct GoogleSignInQuery {
-    code: String
+    code: String,
 }
 
 async fn google_signin_redirect(query: web::Query<GoogleSignInQuery>) -> Result<HttpResponse> {
-    println!("{:?}", query);
+    // TODO: Add some HTML template for displaying the code in more user friendly way
     Ok(HttpResponse::Ok().body(serde_json::to_string(&query.0)?))
-}
-
-async fn google_signin() -> HttpResponse {
-    let base_url = "https://accounts.google.com/o/oauth2/v2/auth";
-    let client_id = std::env::var("GOOGLE_OAUTH2_CLIENT_ID").unwrap();
-    let redirect_uri = "http://localhost:8000/google/redirect";
-    let scope = "https://www.googleapis.com/auth/userinfo.email";
-    let response_type = "code";
-    let access_type = "online";
-
-    let url = format!("{}?client_id={}&redirect_uri={}&scope={}&response_type={}&access_type={}", base_url, client_id, redirect_uri, scope, response_type, access_type);
-
-    HttpResponse::Ok()
-    .content_type("application/json")
-    .body(json!({
-        "url": url
-    }))
-
 }
 
 #[actix_web::main]
@@ -67,8 +70,11 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(create_schema()))
             .service(web::resource("/").guard(guard::Post()).to(index))
             .service(web::resource("/").guard(guard::Get()).to(index_playground))
-            .service(web::resource("/google").guard(guard::Get()).to(google_signin))
-            .service(web::resource("/google/redirect").guard(guard::Get()).to(google_signin_redirect))
+            .service(
+                web::resource("/google/redirect")
+                    .guard(guard::Get())
+                    .to(google_signin_redirect),
+            )
     })
     .bind(format!("0.0.0.0:{}", port))?
     .run()

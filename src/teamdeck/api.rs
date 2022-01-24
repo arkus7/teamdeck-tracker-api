@@ -51,11 +51,11 @@ impl Display for PaginationHeader {
 impl From<PaginationHeader> for HeaderName {
     fn from(header: PaginationHeader) -> Self {
         match header {
-                      PaginationHeader::TotalCount => HeaderName::from_static("x-pagination-total-count"),
-                      PaginationHeader::CurrentPage => HeaderName::from_static("x-pagination-current-page"),
-                      PaginationHeader::ItemsPerPage => HeaderName::from_static("x-pagination-per-page"),
-                      PaginationHeader::PagesCount => HeaderName::from_static("x-pagination-page-count"),
-                  }
+            PaginationHeader::TotalCount => HeaderName::from_static("x-pagination-total-count"),
+            PaginationHeader::CurrentPage => HeaderName::from_static("x-pagination-current-page"),
+            PaginationHeader::ItemsPerPage => HeaderName::from_static("x-pagination-per-page"),
+            PaginationHeader::PagesCount => HeaderName::from_static("x-pagination-page-count"),
+        }
     }
 }
 
@@ -112,6 +112,22 @@ impl CreateTimeEntryBody {
 }
 
 impl TeamdeckApiClient {
+    #[tracing::instrument(name = "Fetching resource by email from Teamdeck API", skip(self), err)]
+    pub async fn get_resource_by_email(
+        &self,
+        email: &str,
+    ) -> Result<Option<Resource>, TeamdeckApiError> {
+        let resources: Vec<Resource> = self
+            .get(format!("https://api.teamdeck.io/v1/resources?email={}", email).as_str())
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        let resource = resources.first();
+        Ok(resource.cloned())
+    }
+
     #[tracing::instrument(name = "Fetching resource by ID from Teamdeck API", skip(self), err)]
     pub async fn get_resource_by_id(
         &self,
@@ -299,9 +315,9 @@ impl TeamdeckApiClient {
             // .json()
             .await?;
 
-            println!("{}",&tag);
+        println!("{}", &tag);
 
-            serde_json::from_str(&tag).map_err(|e| TeamdeckApiError::ServerError(e.to_string()))
+        serde_json::from_str(&tag).map_err(|e| TeamdeckApiError::ServerError(e.to_string()))
         // Ok(Some(tag))
     }
 
@@ -365,12 +381,9 @@ impl TeamdeckApiClient {
         headers: &HeaderMap,
         header: HeaderName,
     ) -> Result<u64, TeamdeckApiError> {
-        let header_value = headers
-            .get(&header)
-            .ok_or_else(|| TeamdeckApiError::ServerError(format!(
-                "Missing {} header value in response",
-                &header
-            )));
+        let header_value = headers.get(&header).ok_or_else(|| {
+            TeamdeckApiError::ServerError(format!("Missing {} header value in response", &header))
+        });
 
         let string_val = header_value?
             .to_str()
@@ -400,7 +413,7 @@ impl TeamdeckApiClient {
         let mut total_pages: u64 = 1;
 
         while current_page != total_pages {
-            current_page +=  1;
+            current_page += 1;
             let page = f(Some(current_page)).await?;
             items.extend(page.items);
             total_pages = page.pagination.pages_count;
