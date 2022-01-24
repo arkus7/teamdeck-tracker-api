@@ -14,19 +14,19 @@ path = "src/main.rs"
 name = "teamdeck_tracker_api"
 
 [dependencies]
-async-graphql = { version = "2.9.10", features = ["apollo_tracing"] }
-async-graphql-actix-web = "2.9.10"
-actix-web = "3"
+async-graphql = { version = "3.0.24", features = ["apollo_tracing"] }
+async-graphql-actix-web = "3.0.24"
+actix-web = { version = "4.0.0-beta.21" }
 chrono = { version = "0.4.19", features = ["serde"] }
 reqwest = { version = "0.10.10", features = ["serde_json", "json"] }
 serde = { version = "1", features = ["derive"]}
 thiserror = "1.0.30"
 tracing = { version = "0.1", features = ["log"] }
 tracing-futures = "0.2.5"
-tracing-subscriber = { version = "0.2.12", features = ["registry", "env-filter"] }
-tracing-bunyan-formatter = "0.2.4"
+tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
+tracing-bunyan-formatter = "0.3.2"
 tracing-log = "0.1.2"
-tracing-actix-web = "0.2"
+tracing-actix-web = "0.5.0-beta.11"
 serde_json = "1.0.66"
 dotenv = "0.15.0"
 jsonwebtoken = "7.2.0"
