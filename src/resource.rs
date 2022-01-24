@@ -1,10 +1,10 @@
-use crate::teamdeck::api::TeamdeckApiClient;
+use crate::{auth::token::AccessToken, teamdeck::api::TeamdeckApiClient};
 use async_graphql::{Context, Object, Result, ResultExt, SimpleObject};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, SimpleObject, Debug)]
+#[derive(Serialize, Deserialize, SimpleObject, Debug, Clone)]
 pub struct Resource {
-    id: u64,
+    pub id: u64,
     name: String,
     active: bool,
     avatar: Option<String>,
@@ -29,5 +29,16 @@ impl ResourceQuery {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
         let resources = client.get_resources().await.extend()?;
         Ok(resources)
+    }
+
+    // FIXME: Guards seems to not work, see: https://github.com/async-graphql/async-graphql/issues/725
+    // #[graphql(guard = "AuthGuard::new()")]
+    async fn me(&self, ctx: &Context<'_>) -> Result<Option<Resource>> {
+        let resource_id = ctx
+            .data::<AccessToken>()?.resource_id();
+        let client = ctx.data_unchecked::<TeamdeckApiClient>();
+        let resource = client.get_resource_by_id(resource_id).await.extend()?;
+
+        Ok(resource)
     }
 }

@@ -1,3 +1,4 @@
+pub mod auth;
 mod project;
 mod resource;
 mod scalars;
@@ -13,6 +14,7 @@ use crate::time_entry::{TimeEntryMutation, TimeEntryQuery};
 use crate::timer::{TimerMutation, TimerQuery, Timers};
 use async_graphql::extensions::ApolloTracing;
 use async_graphql::{EmptySubscription, MergedObject, Schema};
+use auth::{AuthMutation, AuthQuery};
 use time_entry_tag::TimeEntryTagQuery;
 
 pub type ApiSchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
@@ -24,10 +26,11 @@ pub struct QueryRoot(
     ProjectQuery,
     TimeEntryQuery,
     TimeEntryTagQuery,
+    AuthQuery,
 );
 
 #[derive(MergedObject, Default)]
-pub struct MutationRoot(TimerMutation, TimeEntryMutation);
+pub struct MutationRoot(TimerMutation, TimeEntryMutation, AuthMutation);
 
 pub fn create_schema() -> ApiSchema {
     Schema::build(
