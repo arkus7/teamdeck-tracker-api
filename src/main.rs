@@ -5,13 +5,13 @@ use crate::telemetry::{get_logs_subscriber, init_logs_subscriber};
 use actix_web::web::Data;
 use actix_web::{guard, web, App, HttpResponse, HttpServer, Result};
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
-use async_graphql_actix_web::{Request, Response};
+use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use teamdeck_tracker_api::{create_schema, ApiSchema};
 use tracing_actix_web::TracingLogger;
 
-async fn index(schema: web::Data<ApiSchema>, req: Request) -> Response {
+async fn index(schema: web::Data<ApiSchema>, req: GraphQLRequest) -> GraphQLResponse {
     schema.execute(req.into_inner()).await.into()
 }
 
