@@ -1,6 +1,6 @@
 use crate::teamdeck::api::TeamdeckApiClient;
 use async_graphql::{Context, Object, Result, ResultExt, SimpleObject};
-use serde::{Deserialize, Serialize, Deserializer, de::Unexpected};
+use serde::{de::Unexpected, Deserialize, Deserializer, Serialize};
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug)]
 pub struct TimeEntryTag {
@@ -20,10 +20,7 @@ impl TimeEntryTagQuery {
     #[tracing::instrument(name = "Fetching time entry tag by id", skip(ctx))]
     async fn time_entry_tag(&self, ctx: &Context<'_>, tag_id: u64) -> Result<Option<TimeEntryTag>> {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
-        let tag: Option<TimeEntryTag> = client
-        .get_time_entry_tag(tag_id)
-        .await
-        .extend()?;
+        let tag: Option<TimeEntryTag> = client.get_time_entry_tag(tag_id).await.extend()?;
         Ok(tag)
     }
 

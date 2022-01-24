@@ -25,7 +25,7 @@ async fn index_playground() -> Result<HttpResponse> {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct GoogleSignInQuery {
-    code: String
+    code: String,
 }
 
 async fn google_signin_redirect(query: web::Query<GoogleSignInQuery>) -> Result<HttpResponse> {
@@ -70,8 +70,16 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(create_schema()))
             .service(web::resource("/").guard(guard::Post()).to(index))
             .service(web::resource("/").guard(guard::Get()).to(index_playground))
-            .service(web::resource("/google").guard(guard::Get()).to(google_signin))
-            .service(web::resource("/google/redirect").guard(guard::Get()).to(google_signin_redirect))
+            .service(
+                web::resource("/google")
+                    .guard(guard::Get())
+                    .to(google_signin),
+            )
+            .service(
+                web::resource("/google/redirect")
+                    .guard(guard::Get())
+                    .to(google_signin_redirect),
+            )
     })
     .bind(format!("0.0.0.0:{}", port))?
     .run()
