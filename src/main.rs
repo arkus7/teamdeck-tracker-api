@@ -1,3 +1,4 @@
+#![feature(unboxed_closures)]
 mod telemetry;
 
 use crate::telemetry::{get_logs_subscriber, init_logs_subscriber};
@@ -63,7 +64,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
-            .wrap(TracingLogger)
+            .wrap(TracingLogger::default())
             .app_data(Data::new(create_schema()))
             .service(web::resource("/").guard(guard::Post()).to(index))
             .service(web::resource("/").guard(guard::Get()).to(index_playground))
