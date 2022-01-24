@@ -41,14 +41,16 @@ async fn google_signin() -> HttpResponse {
     let response_type = "code";
     let access_type = "online";
 
-    let url = format!("{}?client_id={}&redirect_uri={}&scope={}&response_type={}&access_type={}", base_url, client_id, redirect_uri, scope, response_type, access_type);
+    let url = format!(
+        "{}?client_id={}&redirect_uri={}&scope={}&response_type={}&access_type={}",
+        base_url, client_id, redirect_uri, scope, response_type, access_type
+    );
+
+    let response = json!({ "url": url }).as_str().unwrap().to_owned();
 
     HttpResponse::Ok()
-    .content_type("application/json")
-    .body(json!({
-        "url": url
-    }))
-
+        .content_type("application/json")
+        .body(response)
 }
 
 #[actix_web::main]
