@@ -16,7 +16,7 @@ async fn index(schema: web::Data<ApiSchema>, req: GraphQLRequest, http_req: Http
     let mut query: async_graphql::Request = req.into_inner();
 
     let auth_token = dbg!(get_token(http_req));
-    let access_token = dbg!(auth_token.map(|t| AccessToken::verify(&t).ok()).flatten());
+    let access_token = dbg!(auth_token.and_then(|t| AccessToken::verify(&t).ok()));
 
     if let Some(token) = access_token {
         query = query.data(token);
