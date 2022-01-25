@@ -19,7 +19,8 @@ async fn index(schema: web::Data<ApiSchema>, req: GraphQLRequest, http_req: Http
     let access_token = dbg!(auth_token.and_then(|t| AccessToken::verify(&t).ok()));
 
     if let Some(token) = access_token {
-        query = query.data(token);
+        let resource_id = token.resource_id();
+        query = query.data(token).data(resource_id);
     }
 
     schema.execute(query).await.into()
