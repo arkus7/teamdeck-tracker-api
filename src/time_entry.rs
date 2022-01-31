@@ -1,3 +1,5 @@
+use crate::auth::guard::AccessTokenAuthGuard;
+use crate::auth::token::ResourceId;
 use crate::project::Project;
 use crate::resource::Resource;
 use crate::scalars::{Date, Time};
@@ -55,13 +57,10 @@ pub struct TimeEntryQuery;
 #[Object]
 impl TimeEntryQuery {
     #[tracing::instrument(name = "Fetching all time entries for resource", skip(ctx))]
-    async fn time_entries(
-        &self,
-        ctx: &Context<'_>,
-        resource_id: u64,
-        date: Option<Date>,
-    ) -> Result<Vec<TimeEntry>> {
+    #[graphql(guard = "AccessTokenAuthGuard::default()")]
+    async fn time_entries(&self, ctx: &Context<'_>, date: Option<Date>) -> Result<Vec<TimeEntry>> {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
+        let resource_id = *ctx.data_unchecked::<ResourceId>();
         let time_entries = client
             .get_time_entries(resource_id, date.map(|d| d.0))
             .await
