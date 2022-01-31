@@ -1,7 +1,9 @@
-use crate::{auth::token::{AccessToken, ResourceId}, teamdeck::api::TeamdeckApiClient};
+use crate::{
+    auth::{guard::AccessTokenAuthGuard, token::ResourceId},
+    teamdeck::api::TeamdeckApiClient,
+};
 use async_graphql::{Context, Object, Result, ResultExt, SimpleObject};
 use serde::{Deserialize, Serialize};
-use crate::auth::guard::AccessTokenAuthGuard;
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug, Clone)]
 pub struct Resource {
