@@ -34,6 +34,7 @@ impl ResourceQuery {
         Ok(resources)
     }
 
+    #[tracing::instrument(name = "Fetching authorized user", skip(ctx))]
     #[graphql(guard = "AccessTokenAuthGuard::default()")]
     async fn me(&self, ctx: &Context<'_>) -> Result<Option<Resource>> {
         let resource_id = *ctx.data_unchecked::<ResourceId>();
