@@ -74,60 +74,36 @@ pub struct TimeEntryMutation;
 
 #[derive(InputObject, Debug, Serialize, Deserialize)]
 pub struct CreateTimeEntryInput {
-    pub resource_id: u64,
     pub project_id: u64,
     pub weekend_booking: Option<bool>,
     pub holidays_booking: Option<bool>,
     pub vacations_booking: Option<bool>,
     pub description: Option<String>,
-}
-
-#[derive(InputObject, Debug)]
-pub struct CreateTimeEntryFromDurationInput {
-    entry_input: CreateTimeEntryInput,
-    duration: Time,
-    date: Option<Date>,
-}
-
-#[derive(InputObject, Debug)]
-pub struct CreateTimeEntryFromTimeRangeInput {
-    entry_input: CreateTimeEntryInput,
-    start: Time,
-    end: Time,
-    date: Option<Date>,
+    pub minutes: Option<u64>,
+    pub date: Option<Date>,
+    pub tag_ids: Option<Vec<u64>>,
 }
 
 #[Object]
 impl TimeEntryMutation {
-    #[tracing::instrument(name = "Add time entry from duration", skip(ctx))]
-    async fn add_time_entry_from_duration(
+    #[tracing::instrument(name = "Create time entry for authorized user", skip(ctx))]
+    #[graphql(guard = "AccessTokenAuthGuard::default()")]
+    async fn create_time_entry(
         &self,
         ctx: &Context<'_>,
-        input: CreateTimeEntryFromDurationInput,
+        time_entry: CreateTimeEntryInput,
     ) -> Result<TimeEntry> {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
-        let minutes = input.duration.to_duration().num_minutes().unsigned_abs();
-        let request_body =
-            CreateTimeEntryBody::from_graphql_input(input.entry_input, input.date, minutes);
-        let time_entry = client.add_time_entry(request_body).await.extend()?;
-        Ok(time_entry)
-    }
+        let resource_id = *ctx.data_unchecked::<ResourceId>();
 
-    #[tracing::instrument(name = "Add time entry from time range", skip(ctx))]
-    async fn add_time_entry_from_time_range(
-        &self,
-        ctx: &Context<'_>,
-        input: CreateTimeEntryFromTimeRangeInput,
-    ) -> Result<TimeEntry> {
-        let client = ctx.data_unchecked::<TeamdeckApiClient>();
-        let minutes = input
-            .start
-            .duration_to(input.end)
-            .num_minutes()
-            .unsigned_abs();
-        let request_body =
-            CreateTimeEntryBody::from_graphql_input(input.entry_input, input.date, minutes);
-        let time_entry = client.add_time_entry(request_body).await.extend()?;
-        Ok(time_entry)
+        let request_body = CreateTimeEntryBody::from_graphql_input(&time_entry, resource_id);
+        let created_entry = client.add_time_entry(request_body).await.extend()?;
+
+        if let Some(_tags) = time_entry.tag_ids {
+            // TODO: Update created entry with tags
+            // client.update_time_entry_tags(created_entry.id, tags).await.extend()?;
+        }
+
+        Ok(created_entry)
     }
 }
