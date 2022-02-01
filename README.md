@@ -43,18 +43,107 @@ cargo build --release
 ## 🚧 Roadmap
 
 ### Teamdeck API client
- - [x] Fetching projects
- - [x] Fetching resources/users
-   - [x] Fetch user by email (for authorization purposes)
-   - [x] Fetch user by ID
- - [x] Fetching time entries
- - [x] Fetching time entry tags
- - [x] Create time entry
- - [ ] Update time entry
- - [ ] Update time entry tags
- - [x] Handling pagination
- - [x] Option to fetch all items at once (going through each page and combining result)
- 
+
+#### Booking
+- [ ] Return all bookings
+- [ ] Add new booking
+- [ ] Return single booking
+- [ ] Update booking
+- [ ] Delete booking
+- [ ] Update booking tags for booking
+
+##### Booking tags
+- [ ] Return booking tags
+- [ ] Add new booking tag
+- [ ] Return single booking tag
+- [ ] Update booking tag
+- [ ] Delete booking tag
+
+#### Custom fields
+- [ ] Return custom fields
+- [ ] Add new custom field
+- [ ] Return single custom field
+- [ ] Update custom field
+- [ ] Delete custom field
+
+##### Custom field values
+- [ ] Return custom field values
+- [ ] Add new custom field value
+- [ ] Return single custom field value
+- [ ] Update custom field value
+- [ ] Delete custom field value
+- [ ] Return custom field value from a chosen custom field & resource
+- [ ] Return custom field value from a chosen custom field & project
+
+#### Organization
+- [ ] Return organization information
+
+#### Holidays
+- [ ] Return holidays in organization
+- [ ] Add a new holidays
+- [ ] Return single holiday
+- [ ] Update a holiday
+- [ ] Delete holiday
+
+#### Projects
+- [x] Return projects
+- [ ] Add a new project
+- [x] Return single project
+- [ ] Update project
+- [ ] Assign a custom field value to a project
+- [ ] Delete connection between custom field value and project
+
+#### Resources
+- [x] Return resources
+- [ ] Add a new basic resource
+- [x] Return single resource
+- [ ] Assign a custom field value to resource
+- [ ] Delete connection between custom field value and resource
+
+#### Time entries
+- [x] Return time entries
+- [x] Add a new time entry assigned to resource
+- [ ] Return single time entry
+- [ ] Update time entry
+- [ ] Delete time entry
+- [ ] Update time entry tags
+
+##### Time entry tags
+- [x] Return time entry tags
+- [ ] Add a new time entry tag
+- [x] Return single time entry tag
+- [ ] Update time entry tag
+- [ ] Delete time entry tag
+
+#### Vacations
+- [ ] Return vacations in organization
+- [ ] Add new vacation
+- [ ] Return single vacation
+- [ ] Update vacation
+- [ ] Delete vacation
+
+##### Vacation periods
+- [ ] Return vacation periods
+- [ ] Return single vacation period
+
+##### Vacation reasons
+- [ ] Return vacation reasons
+- [ ] Return single vacation reason
+
+#### Milestones
+- [ ] Return milestones in organization
+- [ ] Add a new milestone
+- [ ] Return single milestone
+- [ ] Update milestone
+- [ ] Delete milestone
+
+#### Organization units
+- [ ] Return organization units
+- [ ] Add a new units
+- [ ] Return single unit
+- [ ] Update an unit
+- [ ] Delete an unit 
+
 ### GraphQL wrapper
 - [x] Google authorization
 - [x] Get all projects
@@ -70,6 +159,7 @@ cargo build --release
 - [ ] Refreshing tokens
 - [ ] Using data loaders to optimize requests
 - [ ] Cache responses from Teamdeck API
+- [ ] Authorization guards for actions available only for admins/managers
  
 
 Resources:
