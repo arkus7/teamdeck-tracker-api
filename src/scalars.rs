@@ -30,7 +30,7 @@ impl Clone for DateTime {
 }
 
 /// Date in YYYY-MM-DD format
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Copy)]
 pub struct Date(pub NaiveDate);
 
 pub const DATE_FORMAT: &str = "%Y-%m-%d";

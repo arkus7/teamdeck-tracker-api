@@ -1,28 +1,37 @@
 use async_graphql::{async_trait::async_trait, Guard};
+use thiserror::Error;
 
-use super::token::AccessToken;
+use super::token::{AccessToken, ResourceId};
 
-pub struct AuthGuard;
+#[derive(Debug)]
+pub struct AccessTokenAuthGuard;
 
-impl AuthGuard {
+impl AccessTokenAuthGuard {
     pub fn new() -> Self {
-        AuthGuard
+        AccessTokenAuthGuard
     }
 }
 
-impl Default for AuthGuard {
+impl Default for AccessTokenAuthGuard {
     fn default() -> Self {
         Self::new()
     }
 }
 
+#[derive(Debug, Error)]
+pub enum AuthError {
+    #[error("Unauthorized, missing, invalid or expired access token")]
+    InvalidAccessToken,
+}
+
 #[async_trait]
-impl Guard for AuthGuard {
+impl Guard for AccessTokenAuthGuard {
+    #[tracing::instrument(name = "Checking access token with guard", skip(ctx))]
     async fn check(&self, ctx: &async_graphql::Context<'_>) -> async_graphql::Result<()> {
-        if ctx.data_opt::<AccessToken>().is_some() {
+        if ctx.data_opt::<AccessToken>().is_some() && ctx.data_opt::<ResourceId>().is_some() {
             Ok(())
         } else {
-            Err("Unauthorized".into())
+            Err(AuthError::InvalidAccessToken.into())
         }
     }
 }
