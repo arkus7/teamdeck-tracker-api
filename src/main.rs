@@ -4,7 +4,7 @@ mod telemetry;
 use crate::telemetry::{get_logs_subscriber, init_logs_subscriber};
 
 use actix_web::web::Data;
-use actix_web::{HttpMessage, guard, web, App, HttpRequest, HttpResponse, HttpServer, Result};
+use actix_web::{guard, web, App, HttpMessage, HttpRequest, HttpResponse, HttpServer, Result};
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql_actix_web::{GraphQLRequest, GraphQLResponse};
 use reqwest::header::AUTHORIZATION;
@@ -12,14 +12,19 @@ use serde::{Deserialize, Serialize};
 use teamdeck_tracker_api::{auth::token::AccessToken, create_schema, ApiSchema};
 use tracing_actix_web::TracingLogger;
 
-async fn index(schema: web::Data<ApiSchema>, req: GraphQLRequest, http_req: HttpRequest) -> GraphQLResponse {
+async fn index(
+    schema: web::Data<ApiSchema>,
+    req: GraphQLRequest,
+    http_req: HttpRequest,
+) -> GraphQLResponse {
     let mut query: async_graphql::Request = req.into_inner();
 
     let auth_token = dbg!(get_token(http_req));
-    let access_token = dbg!(auth_token.map(|t| AccessToken::verify(&t).ok()).flatten());
+    let access_token = dbg!(auth_token.and_then(|t| AccessToken::verify(&t).ok()));
 
     if let Some(token) = access_token {
-        query = query.data(token);
+        let resource_id = token.resource_id();
+        query = query.data(token).data(resource_id);
     }
 
     schema.execute(query).await.into()

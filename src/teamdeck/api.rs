@@ -89,24 +89,23 @@ pub struct CreateTimeEntryBody {
 }
 
 impl CreateTimeEntryBody {
-    pub fn from_graphql_input(
-        input: CreateTimeEntryInput,
-        date: Option<Date>,
-        minutes: u64,
-    ) -> Self {
-        let date = date.unwrap_or_else(|| Date(Utc::today().naive_utc())).0;
+    pub fn from_graphql_input(input: &CreateTimeEntryInput, resource_id: u64) -> Self {
+        let date = input
+            .date
+            .unwrap_or_else(|| Date(Utc::today().naive_utc()))
+            .0;
         CreateTimeEntryBody {
-            resource_id: input.resource_id,
+            resource_id,
             project_id: input.project_id,
-            minutes,
+            minutes: input.minutes.unwrap_or(1),
             weekend_booking: input.weekend_booking,
             holidays_booking: input.holidays_booking,
             vacations_booking: input.vacations_booking,
-            description: input.description,
+            description: input.description.clone(),
             start_date: date,
             end_date: date,
-            creator_resource_id: input.resource_id,
-            editor_resource_id: input.resource_id,
+            creator_resource_id: resource_id,
+            editor_resource_id: resource_id,
         }
     }
 }

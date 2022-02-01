@@ -5,6 +5,8 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub type ResourceId = u64;
+
 #[derive(Debug, Error)]
 pub enum TokenError {
     #[error("error while encoding token")]
@@ -19,7 +21,7 @@ struct Claims {
     iat: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     exp: Option<u64>,
-    resource_id: u64,
+    resource_id: ResourceId,
 }
 
 trait Token {
@@ -73,7 +75,7 @@ impl AccessToken {
         Ok(Self(claims))
     }
 
-    pub fn resource_id(&self) -> u64 {
+    pub fn resource_id(&self) -> ResourceId {
         self.0.resource_id
     }
 }
@@ -99,7 +101,7 @@ pub struct TokenResponse {
 }
 
 impl TokenResponse {
-    pub fn with_user_data(email: &str, resource_id: u64) -> Result<Self, TokenError> {
+    pub fn with_user_data(email: &str, resource_id: ResourceId) -> Result<Self, TokenError> {
         let issued_at = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap();
