@@ -2,7 +2,7 @@ use crate::project::Project;
 use crate::resource::Resource;
 use crate::scalars::{Date, DATE_FORMAT};
 use crate::teamdeck::error::TeamdeckApiError;
-use crate::time_entry::{self, CreateTimeEntryInput, TimeEntry};
+use crate::time_entry::{CreateTimeEntryInput, TimeEntry};
 use crate::time_entry_tag::TimeEntryTag;
 use chrono::{NaiveDate, Utc};
 use reqwest::header::{HeaderMap, HeaderName};
