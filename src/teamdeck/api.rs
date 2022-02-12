@@ -2,12 +2,12 @@ use crate::project::Project;
 use crate::resource::Resource;
 use crate::scalars::{Date, DATE_FORMAT};
 use crate::teamdeck::error::TeamdeckApiError;
-use crate::time_entry::{CreateTimeEntryInput, TimeEntry};
+use crate::time_entry::{self, CreateTimeEntryInput, TimeEntry};
 use crate::time_entry_tag::TimeEntryTag;
 use chrono::{NaiveDate, Utc};
-use reqwest;
 use reqwest::header::{HeaderMap, HeaderName};
 use reqwest::IntoUrl;
+use reqwest::{self, StatusCode};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
@@ -18,15 +18,6 @@ const API_KEY_HEADER_NAME: &str = "X-Api-Key";
 
 pub struct TeamdeckApiClient {
     api_key: String,
-}
-
-impl TeamdeckApiClient {
-    fn from_env() -> Self {
-        Self {
-            api_key: std::env::var(API_KEY_ENV_VARIABLE)
-                .unwrap_or_else(|_| panic!("Missing {} env variable", API_KEY_ENV_VARIABLE)),
-        }
-    }
 }
 
 impl Default for TeamdeckApiClient {
@@ -124,6 +115,13 @@ impl CreateTimeEntryBody {
 }
 
 impl TeamdeckApiClient {
+    fn from_env() -> Self {
+        Self {
+            api_key: std::env::var(API_KEY_ENV_VARIABLE)
+                .unwrap_or_else(|_| panic!("Missing {} env variable", API_KEY_ENV_VARIABLE)),
+        }
+    }
+
     #[tracing::instrument(name = "Fetching resource by email from Teamdeck API", skip(self), err)]
     pub async fn get_resource_by_email(
         &self,
@@ -238,17 +236,35 @@ impl TeamdeckApiClient {
             .await
     }
 
-    #[tracing::instrument(
-        name = "Update time entry by ID",
-        skip(self),
-        err
-    )]
+    #[tracing::instrument(name = "Fetch time entry by ID", skip(self), err)]
+    pub async fn get_time_entry_by_id(
+        &self,
+        time_entry_id: u64,
+    ) -> Result<TimeEntry, TeamdeckApiError> {
+        let time_entry = self
+            .get(format!("https://api.teamdeck.io/v1/time-entries/{}", time_entry_id).as_str())
+            .send()
+            .await?;
+
+        if time_entry.status() == StatusCode::NOT_FOUND {
+            return Err(TeamdeckApiError::NotFound {
+                resource_type: "time entry".to_string(),
+                resource_id: time_entry_id,
+            });
+        }
+
+        let time_entry = time_entry.json().await?;
+
+        Ok(time_entry)
+    }
+
+    #[tracing::instrument(name = "Update time entry by ID", skip(self), err)]
     pub async fn update_time_entry(
         &self,
         time_entry_id: u64,
         body: &UpdateTimeEntryBody,
     ) -> Result<TimeEntry, TeamdeckApiError> {
-        let updated_entry: TimeEntry = self
+        let updated_entry = self
             .put(format!(
                 "https://api.teamdeck.io/v1/time-entries/{}",
                 time_entry_id
