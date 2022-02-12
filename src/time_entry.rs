@@ -2,12 +2,13 @@ use crate::auth::guard::AccessTokenAuthGuard;
 use crate::auth::token::ResourceId;
 use crate::project::Project;
 use crate::resource::Resource;
-use crate::scalars::{Date, Time};
-use crate::teamdeck::api::{CreateTimeEntryBody, TeamdeckApiClient};
+use crate::scalars::Date;
+use crate::teamdeck::api::{CreateTimeEntryBody, TeamdeckApiClient, UpdateTimeEntryBody};
 use crate::time_entry_tag::TimeEntryTag;
 use async_graphql::{ComplexObject, Context, InputObject, Object, Result, ResultExt, SimpleObject};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug)]
 #[graphql(complex)]
@@ -84,6 +85,24 @@ pub struct CreateTimeEntryInput {
     pub tag_ids: Option<Vec<u64>>,
 }
 
+#[derive(InputObject, Debug, Serialize, Deserialize)]
+pub struct UpdateTimeEntryInput {
+    pub project_id: Option<u64>,
+    pub minutes: Option<u64>,
+    pub weekend_booking: Option<bool>,
+    pub holidays_booking: Option<bool>,
+    pub vacations_booking: Option<bool>,
+    pub description: Option<String>,
+    pub start_date: Option<Date>,
+    pub end_date: Option<Date>,
+}
+
+#[derive(Debug, Error)]
+enum UpdateTimeEntryError {
+    #[error("You must be creator of the time entry to update it")]
+    NotACreator,
+}
+
 #[Object]
 impl TimeEntryMutation {
     #[tracing::instrument(name = "Create time entry for authorized user", skip(ctx))]
@@ -105,5 +124,53 @@ impl TimeEntryMutation {
         }
 
         Ok(created_entry)
+    }
+
+    #[tracing::instrument(name = "Update time entry", skip(ctx))]
+    #[graphql(guard = "AccessTokenAuthGuard::default()")]
+    async fn update_time_entry(
+        &self,
+        ctx: &Context<'_>,
+        time_entry_id: u64,
+        update_data: UpdateTimeEntryInput,
+    ) -> Result<TimeEntry> {
+        let client = ctx.data_unchecked::<TeamdeckApiClient>();
+        let resource_id = *ctx.data_unchecked::<ResourceId>();
+
+        let time_entry: TimeEntry = client.get_time_entry_by_id(time_entry_id).await.extend()?;
+
+        if time_entry.resource_id != resource_id {
+            Err(UpdateTimeEntryError::NotACreator.into())
+        } else {
+            let UpdateTimeEntryInput {
+                project_id,
+                minutes,
+                weekend_booking,
+                holidays_booking,
+                vacations_booking,
+                description,
+                start_date,
+                end_date,
+            } = update_data;
+            let updated_entry = client
+                .update_time_entry(
+                    time_entry_id,
+                    &UpdateTimeEntryBody {
+                        project_id: project_id.unwrap_or(time_entry.project_id),
+                        minutes: minutes.unwrap_or(time_entry.minutes),
+                        weekend_booking,
+                        holidays_booking,
+                        vacations_booking,
+                        description,
+                        start_date: start_date.map(|d| d.0).unwrap_or(time_entry.start_date.0),
+                        end_date: end_date.map(|d| d.0).unwrap_or(time_entry.end_date.0),
+                        editor_resource_id: resource_id,
+                    },
+                )
+                .await
+                .extend()?;
+
+            Ok(updated_entry)
+        }
     }
 }

@@ -1,5 +1,5 @@
 use async_graphql::{InputValueError, InputValueResult, Scalar, ScalarType, Value};
-use chrono::{DateTime as ChronoDateTime, Duration, NaiveDate, NaiveTime, Timelike, Utc};
+use chrono::{DateTime as ChronoDateTime, NaiveDate, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 
 /// DateTime RFC3339
@@ -74,16 +74,6 @@ impl ScalarType for Time {
 
     fn to_value(&self) -> Value {
         Value::String(self.0.format(TIME_FORMAT).to_string())
-    }
-}
-
-impl Time {
-    pub fn to_duration(&self) -> Duration {
-        Duration::hours(self.0.hour().into()) + Duration::minutes(self.0.minute().into())
-    }
-
-    pub fn duration_to(&self, other: Self) -> Duration {
-        other.to_duration() - self.to_duration()
     }
 }
 

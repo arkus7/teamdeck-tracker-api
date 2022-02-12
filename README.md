@@ -103,8 +103,8 @@ cargo build --release
 #### Time entries
 - [x] Return time entries
 - [x] Add a new time entry assigned to resource
-- [ ] Return single time entry
-- [ ] Update time entry
+- [x] Return single time entry
+- [x] Update time entry
 - [ ] Delete time entry
 - [ ] Update time entry tags
 
@@ -152,9 +152,9 @@ cargo build --release
 - [x] Get authorized resource
 - [x] Get all time entry tags
 - [x] Get time entry tag by ID
-- [ ] Create time entry
+- [x] Create time entry
   - [ ] Store time entry tags
-- [ ] Update time entry 
+- [x] Update time entry
   - [ ] Update time entry tags
 - [ ] Refreshing tokens
 - [ ] Using data loaders to optimize requests
