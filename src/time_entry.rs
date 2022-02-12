@@ -138,8 +138,7 @@ impl TimeEntryMutation {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
         let resource_id = *ctx.data_unchecked::<ResourceId>();
 
-        let time_entry: TimeEntry =
-            client.get_time_entry_by_id(time_entry_id).await.extend()?;
+        let time_entry: TimeEntry = client.get_time_entry_by_id(time_entry_id).await.extend()?;
 
         if time_entry.resource_id != resource_id {
             Err(UpdateTimeEntryError::NotACreator.into())

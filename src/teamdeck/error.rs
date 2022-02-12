@@ -40,7 +40,7 @@ impl ErrorExtensions for TeamdeckApiError {
                 e.set("code", "NOT_FOUND");
                 e.set("resource_type", resource_type.as_str());
                 e.set("resource_id", *resource_id);
-            },
+            }
             TeamdeckApiError::ServerError(reason) => e.set("reason", reason.to_string()),
         })
     }
