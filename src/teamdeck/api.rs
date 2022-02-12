@@ -88,6 +88,19 @@ pub struct CreateTimeEntryBody {
     pub editor_resource_id: u64,
 }
 
+#[derive(Debug, Serialize)]
+pub struct UpdateTimeEntryBody {
+    pub project_id: u64,
+    pub minutes: u64,
+    pub weekend_booking: Option<bool>,
+    pub holidays_booking: Option<bool>,
+    pub vacations_booking: Option<bool>,
+    pub description: Option<String>,
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub editor_resource_id: u64,
+}
+
 impl CreateTimeEntryBody {
     pub fn from_graphql_input(input: &CreateTimeEntryInput, resource_id: u64) -> Self {
         let date = input
@@ -225,6 +238,30 @@ impl TeamdeckApiClient {
             .await
     }
 
+    #[tracing::instrument(
+        name = "Update time entry by ID",
+        skip(self),
+        err
+    )]
+    pub async fn update_time_entry(
+        &self,
+        time_entry_id: u64,
+        body: &UpdateTimeEntryBody,
+    ) -> Result<TimeEntry, TeamdeckApiError> {
+        let updated_entry: TimeEntry = self
+            .put(format!(
+                "https://api.teamdeck.io/v1/time-entries/{}",
+                time_entry_id
+            ))
+            .json(body)
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        Ok(updated_entry)
+    }
+
     #[tracing::instrument(name = "Fetching time entries page from Teamdeck API", skip(self), err)]
     pub async fn get_time_entries_page(
         &self,
@@ -341,6 +378,12 @@ impl TeamdeckApiClient {
     fn get<U: IntoUrl>(&self, url: U) -> reqwest::RequestBuilder {
         reqwest::Client::new()
             .get(url)
+            .header(API_KEY_HEADER_NAME, &self.api_key)
+    }
+
+    fn put<U: IntoUrl>(&self, url: U) -> reqwest::RequestBuilder {
+        reqwest::Client::new()
+            .put(url)
             .header(API_KEY_HEADER_NAME, &self.api_key)
     }
 
