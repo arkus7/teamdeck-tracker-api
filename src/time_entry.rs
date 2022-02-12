@@ -127,6 +127,8 @@ impl TimeEntryMutation {
         Ok(created_entry)
     }
 
+    #[tracing::instrument(name = "Update time entry", skip(ctx))]
+    #[graphql(guard = "AccessTokenAuthGuard::default()")]
     async fn update_time_entry(
         &self,
         ctx: &Context<'_>,
