@@ -363,14 +363,10 @@ impl TeamdeckApiClient {
             .get(format!("https://api.teamdeck.io/v1/time-entry-tags/{}", tag_id).as_str())
             .send()
             .await?
-            .text()
-            // .json()
+            .json()
             .await?;
 
-        println!("{}", &tag);
-
-        serde_json::from_str(&tag).map_err(|e| TeamdeckApiError::ServerError(e.to_string()))
-        // Ok(Some(tag))
+        Ok(Some(tag))
     }
 
     #[tracing::instrument(name = "Create new time entry via Teamdeck API", skip(self), err)]
