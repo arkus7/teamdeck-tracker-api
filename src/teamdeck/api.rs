@@ -369,6 +369,21 @@ impl TeamdeckApiClient {
         Ok(Some(tag))
     }
 
+    #[tracing::instrument(
+        name = "Update time entry tags",
+        skip(self),
+        err
+    )]
+    pub async fn update_time_entry_tags(
+        &self,
+        time_entry_id: u64,
+        tag_ids: Vec<u64>
+    ) -> Result<TimeEntry, TeamdeckApiError> {
+        let entry = self.put(format!("https://api.teamdeck.io/v1/time-entries/{time_entry_id}/tags")).json(&tag_ids).send().await?.json().await?;
+
+        Ok(entry)
+    }
+
     #[tracing::instrument(name = "Create new time entry via Teamdeck API", skip(self), err)]
     pub async fn add_time_entry(
         &self,
