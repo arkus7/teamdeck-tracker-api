@@ -60,7 +60,7 @@ impl Token for AccessToken {
     }
 
     fn expiration_time() -> Option<Duration> {
-        Some(Duration::from_secs(60 * 60 * 24))
+        Some(Duration::from_secs(60 * 60 * 24 * 7))
     }
 }
 
