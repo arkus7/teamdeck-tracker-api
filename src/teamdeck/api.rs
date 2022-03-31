@@ -246,6 +246,7 @@ impl TeamdeckApiClient {
     ) -> Result<TimeEntry, TeamdeckApiError> {
         let time_entry = self
             .get(format!("https://api.teamdeck.io/v1/time-entries/{}", time_entry_id).as_str())
+            .query(&[("expand", "tags")])
             .send()
             .await?;
 
