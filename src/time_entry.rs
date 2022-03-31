@@ -4,11 +4,13 @@ use crate::project::Project;
 use crate::resource::Resource;
 use crate::scalars::Date;
 use crate::teamdeck::api::{CreateTimeEntryBody, TeamdeckApiClient, UpdateTimeEntryBody};
+use crate::teamdeck::error::TeamdeckApiError;
 use crate::time_entry_tag::TimeEntryTag;
 use async_graphql::{ComplexObject, Context, InputObject, Object, Result, ResultExt, SimpleObject};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tracing::error;
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug)]
 #[graphql(complex)]
@@ -82,7 +84,8 @@ pub struct CreateTimeEntryInput {
     pub description: Option<String>,
     pub minutes: Option<u64>,
     pub date: Option<Date>,
-    pub tag_ids: Option<Vec<u64>>,
+    #[graphql(validator(min_items = 1))]
+    pub tag_ids: Vec<u64>,
 }
 
 #[derive(InputObject, Debug, Serialize, Deserialize)]
@@ -95,6 +98,7 @@ pub struct UpdateTimeEntryInput {
     pub description: Option<String>,
     pub start_date: Option<Date>,
     pub end_date: Option<Date>,
+    #[graphql(validator(min_items = 1))]
     pub tag_ids: Option<Vec<u64>>,
 }
 
@@ -119,10 +123,16 @@ impl TimeEntryMutation {
         let request_body = CreateTimeEntryBody::from_graphql_input(&time_entry, resource_id);
         let mut created_entry = client.add_time_entry(request_body).await.extend()?;
 
-        if let Some(tags) = time_entry.tag_ids {
-            // TODO: Update created entry with tags
-            created_entry = client.update_time_entry_tags(created_entry.id, tags).await.extend()?;
-        }
+        let tag_ids = time_entry.tag_ids;
+        let _ = client
+            .update_time_entry_tags(created_entry.id, tag_ids)
+            .await
+            .extend()
+            .map_err(|e| error!("{:?}", e));
+        created_entry = client
+            .get_time_entry_by_id(created_entry.id)
+            .await
+            .extend()?;
 
         Ok(created_entry)
     }
@@ -167,13 +177,21 @@ impl TimeEntryMutation {
                         start_date: start_date.map(|d| d.0).unwrap_or(time_entry.start_date.0),
                         end_date: end_date.map(|d| d.0).unwrap_or(time_entry.end_date.0),
                         editor_resource_id: resource_id,
+                        tags: tag_ids.clone(),
                     },
                 )
                 .await
                 .extend()?;
 
             if let Some(tags) = tag_ids {
-                updated_entry = client.update_time_entry_tags(time_entry_id, tags).await.extend()?;
+                if tags.len() > 0 {
+                    let _ = client
+                        .update_time_entry_tags(time_entry_id, tags)
+                        .await
+                        .extend()
+                        .map_err(|e| error!("{:?}", e));
+                    updated_entry = client.get_time_entry_by_id(time_entry_id).await.extend()?;
+                }
             }
 
             Ok(updated_entry)

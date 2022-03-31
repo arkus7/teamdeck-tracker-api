@@ -1,8 +1,8 @@
 #![feature(unboxed_closures)]
 mod telemetry;
 
-use actix_cors::Cors;
 use crate::telemetry::{get_logs_subscriber, init_logs_subscriber};
+use actix_cors::Cors;
 
 use actix_web::web::Data;
 use actix_web::{guard, web, App, HttpRequest, HttpResponse, HttpServer, Result};
@@ -72,7 +72,11 @@ async fn main() -> std::io::Result<()> {
     // println!("Playground: http://localhost:8000");
 
     HttpServer::new(move || {
-        let cors = Cors::default().allow_any_origin().allow_any_method().allow_any_header().send_wildcard();
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_method()
+            .allow_any_header()
+            .send_wildcard();
 
         App::new()
             .wrap(cors)
