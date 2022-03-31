@@ -77,6 +77,7 @@ pub struct CreateTimeEntryBody {
     pub end_date: NaiveDate,
     pub creator_resource_id: u64,
     pub editor_resource_id: u64,
+    pub tags: Vec<u64>
 }
 
 #[derive(Debug, Serialize)]
@@ -90,6 +91,7 @@ pub struct UpdateTimeEntryBody {
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
     pub editor_resource_id: u64,
+    pub tags: Option<Vec<u64>>
 }
 
 impl CreateTimeEntryBody {
@@ -110,6 +112,7 @@ impl CreateTimeEntryBody {
             end_date: date,
             creator_resource_id: resource_id,
             editor_resource_id: resource_id,
+            tags: input.tag_ids.clone()
         }
     }
 }
@@ -378,10 +381,10 @@ impl TeamdeckApiClient {
         &self,
         time_entry_id: u64,
         tag_ids: Vec<u64>
-    ) -> Result<TimeEntry, TeamdeckApiError> {
-        let entry = self.put(format!("https://api.teamdeck.io/v1/time-entries/{time_entry_id}/tags")).json(&tag_ids).send().await?.json().await?;
+    ) -> Result<Vec<u64>, TeamdeckApiError> {
+        let tags = self.put(format!("https://api.teamdeck.io/v1/time-entries/{time_entry_id}/tags")).json(&tag_ids).send().await?.json().await?;
 
-        Ok(entry)
+        Ok(tags)
     }
 
     #[tracing::instrument(name = "Create new time entry via Teamdeck API", skip(self), err)]
