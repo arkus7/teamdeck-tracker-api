@@ -95,6 +95,7 @@ pub struct UpdateTimeEntryInput {
     pub description: Option<String>,
     pub start_date: Option<Date>,
     pub end_date: Option<Date>,
+    pub tag_ids: Option<Vec<u64>>,
 }
 
 #[derive(Debug, Error)]
@@ -116,11 +117,11 @@ impl TimeEntryMutation {
         let resource_id = *ctx.data_unchecked::<ResourceId>();
 
         let request_body = CreateTimeEntryBody::from_graphql_input(&time_entry, resource_id);
-        let created_entry = client.add_time_entry(request_body).await.extend()?;
+        let mut created_entry = client.add_time_entry(request_body).await.extend()?;
 
-        if let Some(_tags) = time_entry.tag_ids {
+        if let Some(tags) = time_entry.tag_ids {
             // TODO: Update created entry with tags
-            // client.update_time_entry_tags(created_entry.id, tags).await.extend()?;
+            created_entry = client.update_time_entry_tags(created_entry.id, tags).await.extend()?;
         }
 
         Ok(created_entry)
@@ -151,8 +152,9 @@ impl TimeEntryMutation {
                 description,
                 start_date,
                 end_date,
+                tag_ids,
             } = update_data;
-            let updated_entry = client
+            let mut updated_entry = client
                 .update_time_entry(
                     time_entry_id,
                     &UpdateTimeEntryBody {
@@ -169,6 +171,10 @@ impl TimeEntryMutation {
                 )
                 .await
                 .extend()?;
+
+            if let Some(tags) = tag_ids {
+                updated_entry = client.update_time_entry_tags(time_entry_id, tags).await.extend()?;
+            }
 
             Ok(updated_entry)
         }
