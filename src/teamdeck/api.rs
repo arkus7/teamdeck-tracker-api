@@ -363,14 +363,25 @@ impl TeamdeckApiClient {
             .get(format!("https://api.teamdeck.io/v1/time-entry-tags/{}", tag_id).as_str())
             .send()
             .await?
-            .text()
-            // .json()
+            .json()
             .await?;
 
-        println!("{}", &tag);
+        Ok(Some(tag))
+    }
 
-        serde_json::from_str(&tag).map_err(|e| TeamdeckApiError::ServerError(e.to_string()))
-        // Ok(Some(tag))
+    #[tracing::instrument(
+        name = "Update time entry tags",
+        skip(self),
+        err
+    )]
+    pub async fn update_time_entry_tags(
+        &self,
+        time_entry_id: u64,
+        tag_ids: Vec<u64>
+    ) -> Result<TimeEntry, TeamdeckApiError> {
+        let entry = self.put(format!("https://api.teamdeck.io/v1/time-entries/{time_entry_id}/tags")).json(&tag_ids).send().await?.json().await?;
+
+        Ok(entry)
     }
 
     #[tracing::instrument(name = "Create new time entry via Teamdeck API", skip(self), err)]
