@@ -291,7 +291,7 @@ impl TeamdeckApiClient {
     ) -> Result<Page<TimeEntry>, TeamdeckApiError> {
         let mut params = HashMap::new();
         params.insert("resource_id", resource_id.to_string());
-        params.insert("page", page.unwrap_or(1).to_string());
+        params.insert("page", page.unwrap_or(0).to_string());
         params.insert("expand", "tags".to_string());
 
         if let Some(date) = date {
@@ -489,7 +489,7 @@ impl TeamdeckApiClient {
         let mut current_page = 0;
         let mut total_pages: u64 = 1;
 
-        while current_page != total_pages {
+        while current_page != total_pages && total_pages != 0 {
             current_page += 1;
             let page = f(Some(current_page)).await?;
             items.extend(page.items);
