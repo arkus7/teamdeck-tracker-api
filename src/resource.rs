@@ -37,7 +37,7 @@ impl ResourceQuery {
     #[tracing::instrument(name = "Fetching authorized user", skip(ctx))]
     #[graphql(guard = "AccessTokenAuthGuard::default()")]
     async fn me(&self, ctx: &Context<'_>) -> Result<Option<Resource>> {
-        let resource_id = *ctx.data_unchecked::<ResourceId>();
+        let resource_id = ctx.data_unchecked::<ResourceId>().0;
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
 
         let resource = client.get_resource_by_id(resource_id).await.extend()?;

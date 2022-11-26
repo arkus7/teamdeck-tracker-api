@@ -35,7 +35,8 @@ impl AuthMutation {
         let resource = teamdeck_api.get_resource_by_email(&email).await?;
 
         if let Some(resource) = resource {
-            let token = token::TokenResponse::with_user_data(&email, resource.id)?;
+            let token =
+                token::TokenResponse::with_user_data(&email, token::ResourceId(resource.id))?;
             Ok(token)
         } else {
             Err(async_graphql::Error::new(format!(

@@ -1,11 +1,26 @@
-use std::time::{Duration, SystemTime};
+use std::{time::{Duration, SystemTime}, ops::Deref};
 
 use async_graphql::SimpleObject;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-pub type ResourceId = u64;
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct ResourceId(pub u64);
+
+impl Deref for ResourceId {
+    type Target = u64;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<ResourceId> for u64 {
+    fn from(value: ResourceId) -> Self {
+        value.0
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum TokenError {

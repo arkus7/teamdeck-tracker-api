@@ -69,7 +69,7 @@ impl TimeEntryQuery {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
         let resource_id = *ctx.data_unchecked::<ResourceId>();
         let time_entries = client
-            .get_time_entries(resource_id, date.map(|d| d.0))
+            .get_time_entries(resource_id.into(), date.map(|d| d.0))
             .await
             .extend()?;
 
@@ -133,7 +133,7 @@ impl TimeEntryMutation {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
         let resource_id = *ctx.data_unchecked::<ResourceId>();
 
-        let request_body = CreateTimeEntryBody::from_graphql_input(&time_entry, resource_id);
+        let request_body = CreateTimeEntryBody::from_graphql_input(&time_entry, resource_id.into());
         let mut created_entry = client.add_time_entry(request_body).await.extend()?;
 
         let tag_ids = time_entry.tag_ids;
@@ -160,6 +160,7 @@ impl TimeEntryMutation {
     ) -> Result<TimeEntry> {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
         let resource_id = *ctx.data_unchecked::<ResourceId>();
+        let resource_id = resource_id.0;
 
         let time_entry: TimeEntry = client.get_time_entry_by_id(time_entry_id).await.extend()?;
 
