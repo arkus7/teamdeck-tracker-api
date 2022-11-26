@@ -1,8 +1,5 @@
-use crate::{
-    auth::{guard::AccessTokenAuthGuard, token::ResourceId},
-    teamdeck::api::TeamdeckApiClient,
-};
-use async_graphql::{Context, Object, Result, ResultExt, SimpleObject};
+use crate::auth::{guard::AccessTokenAuthGuard, token::ResourceId};
+use async_graphql::{Context, Object, Result, SimpleObject};
 use serde::{Deserialize, Serialize};
 use teamdeck::{
     api::{

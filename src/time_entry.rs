@@ -151,7 +151,7 @@ impl TimeEntryMutation {
         let resource_id = *ctx.data_unchecked::<ResourceId>();
 
         let request_body = CreateTimeEntryBody::from_graphql_input(&time_entry, resource_id.into());
-        let mut created_entry = client.add_time_entry(request_body).await.extend()?;
+        let created_entry = client.add_time_entry(request_body).await.extend()?;
 
         let tag_ids = time_entry.tag_ids;
         let _ = client

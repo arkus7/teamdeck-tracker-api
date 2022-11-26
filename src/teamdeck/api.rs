@@ -1,13 +1,11 @@
-use crate::project::ProjectModel;
-use crate::resource::ResourceModel;
-use crate::scalars::{Date, DATE_FORMAT};
+use crate::scalars::Date;
 use crate::teamdeck::error::TeamdeckApiError;
 use crate::time_entry::{CreateTimeEntryInput, TimeEntryModel};
 use crate::time_entry_tag::TimeEntryTag;
 use chrono::{NaiveDate, Utc};
 use reqwest::header::{HeaderMap, HeaderName};
 use reqwest::IntoUrl;
-use reqwest::{self, StatusCode};
+use reqwest::{self};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fmt::{Debug, Display, Formatter};
@@ -26,6 +24,7 @@ impl Default for TeamdeckApiClient {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 enum PaginationHeader {
     TotalCount,
     PagesCount,
@@ -33,20 +32,26 @@ enum PaginationHeader {
     ItemsPerPage,
 }
 
+impl PaginationHeader {
+    fn as_str(&self) -> &'static str {
+        match self {
+            PaginationHeader::TotalCount => "x-pagination-total-count",
+            PaginationHeader::PagesCount => "x-pagination-page-count",
+            PaginationHeader::CurrentPage => "x-pagination-current-page",
+            PaginationHeader::ItemsPerPage => "x-pagination-per-page",
+        }
+    }
+}
+
 impl Display for PaginationHeader {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
+        write!(f, "{}", self.as_str())
     }
 }
 
 impl From<PaginationHeader> for HeaderName {
     fn from(header: PaginationHeader) -> Self {
-        match header {
-            PaginationHeader::TotalCount => HeaderName::from_static("x-pagination-total-count"),
-            PaginationHeader::CurrentPage => HeaderName::from_static("x-pagination-current-page"),
-            PaginationHeader::ItemsPerPage => HeaderName::from_static("x-pagination-per-page"),
-            PaginationHeader::PagesCount => HeaderName::from_static("x-pagination-page-count"),
-        }
+        HeaderName::from_static(header.as_str())
     }
 }
 
@@ -98,7 +103,7 @@ impl CreateTimeEntryBody {
     pub fn from_graphql_input(input: &CreateTimeEntryInput, resource_id: u64) -> Self {
         let date = input
             .date
-            .unwrap_or_else(|| Date(Utc::today().naive_utc()))
+            .unwrap_or_else(|| Date(Utc::now().date_naive()))
             .0;
         CreateTimeEntryBody {
             resource_id,
