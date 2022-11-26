@@ -4,7 +4,6 @@ use crate::project::Project;
 use crate::resource::Resource;
 use crate::scalars::Date;
 use crate::teamdeck::api::{CreateTimeEntryBody, TeamdeckApiClient, UpdateTimeEntryBody};
-use crate::teamdeck::error::TeamdeckApiError;
 use crate::time_entry_tag::TimeEntryTag;
 use async_graphql::{ComplexObject, Context, InputObject, Object, Result, ResultExt, SimpleObject};
 use chrono::Duration;
@@ -61,13 +60,27 @@ pub struct TimeEntryQuery;
 impl TimeEntryQuery {
     #[tracing::instrument(name = "Fetching all time entries for resource", skip(ctx))]
     #[graphql(guard = "AccessTokenAuthGuard::default()")]
-    async fn time_entries(&self, ctx: &Context<'_>, date: Option<Date>) -> Result<Vec<TimeEntry>> {
+    async fn time_entries(
+        &self,
+        ctx: &Context<'_>,
+        date: Option<Date>,
+        project_id: Option<u64>,
+    ) -> Result<Vec<TimeEntry>> {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
         let resource_id = *ctx.data_unchecked::<ResourceId>();
         let time_entries = client
             .get_time_entries(resource_id, date.map(|d| d.0))
             .await
             .extend()?;
+
+        let time_entries = match project_id {
+            None => time_entries,
+            Some(id) => time_entries
+                .into_iter()
+                .filter(|e| e.project_id == id)
+                .collect(),
+        };
+
         Ok(time_entries)
     }
 }
@@ -184,7 +197,7 @@ impl TimeEntryMutation {
                 .extend()?;
 
             if let Some(tags) = tag_ids {
-                if tags.len() > 0 {
+                if !tags.is_empty() {
                     let _ = client
                         .update_time_entry_tags(time_entry_id, tags)
                         .await
