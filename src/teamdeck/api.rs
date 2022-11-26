@@ -1,8 +1,8 @@
-use crate::project::Project;
-use crate::resource::Resource;
+use crate::project::ProjectModel;
+use crate::resource::ResourceModel;
 use crate::scalars::{Date, DATE_FORMAT};
 use crate::teamdeck::error::TeamdeckApiError;
-use crate::time_entry::{CreateTimeEntryInput, TimeEntry};
+use crate::time_entry::{CreateTimeEntryInput, TimeEntryModel};
 use crate::time_entry_tag::TimeEntryTag;
 use chrono::{NaiveDate, Utc};
 use reqwest::header::{HeaderMap, HeaderName};
@@ -125,149 +125,12 @@ impl TeamdeckApiClient {
         }
     }
 
-    #[tracing::instrument(name = "Fetching resource by email from Teamdeck API", skip(self), err)]
-    pub async fn get_resource_by_email(
-        &self,
-        email: &str,
-    ) -> Result<Option<Resource>, TeamdeckApiError> {
-        let resources: Vec<Resource> = self
-            .get(format!("https://api.teamdeck.io/v1/resources?email={}", email).as_str())
-            .send()
-            .await?
-            .json()
-            .await?;
-
-        let resource = resources.first();
-        Ok(resource.cloned())
-    }
-
-    #[tracing::instrument(name = "Fetching resource by ID from Teamdeck API", skip(self), err)]
-    pub async fn get_resource_by_id(
-        &self,
-        resource_id: u64,
-    ) -> Result<Option<Resource>, TeamdeckApiError> {
-        let resource = self
-            .get(format!("https://api.teamdeck.io/v1/resources/{}", resource_id).as_str())
-            .send()
-            .await?
-            .json()
-            .await?;
-
-        Ok(resource)
-    }
-
-    #[tracing::instrument(name = "Fetching resource page from Teamdeck API", skip(self), err)]
-    pub async fn get_resources_page(
-        &self,
-        page: Option<u64>,
-    ) -> Result<Page<Resource>, TeamdeckApiError> {
-        let response = self
-            .get("https://api.teamdeck.io/v1/resources")
-            .query(&[("page", page.unwrap_or(1))])
-            .send()
-            .await?;
-        tracing::debug!("Response: {:?}", response);
-        let headers = response.headers().clone();
-        let pagination = TeamdeckApiClient::read_pagination_info(&headers)?;
-        let resources = response.json().await?;
-
-        Ok(Page {
-            items: resources,
-            pagination,
-        })
-    }
-
-    #[tracing::instrument(name = "Fetching all resources from Teamdeck API", skip(self), err)]
-    pub async fn get_resources(&self) -> Result<Vec<Resource>, TeamdeckApiError> {
-        self.traverse_all_pages(|page| self.get_resources_page(page))
-            .await
-    }
-
-    #[tracing::instrument(name = "Fetching projects page from Teamdeck API", skip(self), err)]
-    pub async fn get_projects_page(
-        &self,
-        page: Option<u64>,
-    ) -> Result<Page<Project>, TeamdeckApiError> {
-        let response = self
-            .get("https://api.teamdeck.io/v1/projects")
-            .query(&[("page", page.unwrap_or(1))])
-            .send()
-            .await?;
-
-        let headers = response.headers().clone();
-        let pagination = TeamdeckApiClient::read_pagination_info(&headers)?;
-
-        let projects = response.json().await?;
-
-        Ok(Page {
-            items: projects,
-            pagination,
-        })
-    }
-
-    #[tracing::instrument(name = "Fetching all projects from Teamdeck API", skip(self), err)]
-    pub async fn get_projects(&self) -> Result<Vec<Project>, TeamdeckApiError> {
-        self.traverse_all_pages(|page| self.get_projects_page(page))
-            .await
-    }
-
-    #[tracing::instrument(name = "Fetching project by ID from Teamdeck API", skip(self), err)]
-    pub async fn get_project_by_id(
-        &self,
-        project_id: u64,
-    ) -> Result<Option<Project>, TeamdeckApiError> {
-        let project = self
-            .get(format!("https://api.teamdeck.io/v1/projects/{}", project_id).as_str())
-            .send()
-            .await?
-            .json()
-            .await?;
-        Ok(Some(project))
-    }
-
-    #[tracing::instrument(
-        name = "Fetching all time entries page from Teamdeck API",
-        skip(self),
-        err
-    )]
-    pub async fn get_time_entries(
-        &self,
-        resource_id: u64,
-        date: Option<NaiveDate>,
-    ) -> Result<Vec<TimeEntry>, TeamdeckApiError> {
-        self.traverse_all_pages(|page| self.get_time_entries_page(resource_id, date, page))
-            .await
-    }
-
-    #[tracing::instrument(name = "Fetch time entry by ID", skip(self), err)]
-    pub async fn get_time_entry_by_id(
-        &self,
-        time_entry_id: u64,
-    ) -> Result<TimeEntry, TeamdeckApiError> {
-        let time_entry = self
-            .get(format!("https://api.teamdeck.io/v1/time-entries/{}", time_entry_id).as_str())
-            .query(&[("expand", "tags")])
-            .send()
-            .await?;
-
-        if time_entry.status() == StatusCode::NOT_FOUND {
-            return Err(TeamdeckApiError::NotFound {
-                resource_type: "time entry".to_string(),
-                resource_id: time_entry_id,
-            });
-        }
-
-        let time_entry = time_entry.json().await?;
-
-        Ok(time_entry)
-    }
-
     #[tracing::instrument(name = "Update time entry by ID", skip(self), err)]
     pub async fn update_time_entry(
         &self,
         time_entry_id: u64,
         body: &UpdateTimeEntryBody,
-    ) -> Result<TimeEntry, TeamdeckApiError> {
+    ) -> Result<TimeEntryModel, TeamdeckApiError> {
         let updated_entry = self
             .put(format!(
                 "https://api.teamdeck.io/v1/time-entries/{}",
@@ -280,39 +143,6 @@ impl TeamdeckApiClient {
             .await?;
 
         Ok(updated_entry)
-    }
-
-    #[tracing::instrument(name = "Fetching time entries page from Teamdeck API", skip(self), err)]
-    pub async fn get_time_entries_page(
-        &self,
-        resource_id: u64,
-        date: Option<NaiveDate>,
-        page: Option<u64>,
-    ) -> Result<Page<TimeEntry>, TeamdeckApiError> {
-        let mut params = HashMap::new();
-        params.insert("resource_id", resource_id.to_string());
-        params.insert("page", page.unwrap_or(0).to_string());
-        params.insert("expand", "tags".to_string());
-
-        if let Some(date) = date {
-            params.insert("date", date.format(DATE_FORMAT).to_string());
-        }
-
-        let response = self
-            .get("https://api.teamdeck.io/v1/time-entries")
-            .query(&params)
-            .send()
-            .await?;
-
-        let headers = response.headers();
-        let pagination = TeamdeckApiClient::read_pagination_info(headers)?;
-
-        let time_entries = response.json().await?;
-
-        Ok(Page {
-            items: time_entries,
-            pagination,
-        })
     }
 
     #[tracing::instrument(
@@ -396,7 +226,7 @@ impl TeamdeckApiClient {
     pub async fn add_time_entry(
         &self,
         body: CreateTimeEntryBody,
-    ) -> Result<TimeEntry, TeamdeckApiError> {
+    ) -> Result<TimeEntryModel, TeamdeckApiError> {
         let response = self
             .post("https://api.teamdeck.io/v1/time-entries")
             .json(&body)

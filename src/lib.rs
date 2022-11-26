@@ -12,6 +12,7 @@ use crate::resource::ResourceQuery;
 use crate::teamdeck::api::TeamdeckApiClient;
 use crate::time_entry::{TimeEntryMutation, TimeEntryQuery};
 use crate::timer::{TimerMutation, TimerQuery, Timers};
+use ::teamdeck::AsyncTeamdeck;
 use async_graphql::extensions::ApolloTracing;
 use async_graphql::{EmptySubscription, MergedObject, Schema};
 use auth::{AuthMutation, AuthQuery};
@@ -39,6 +40,9 @@ pub fn create_schema() -> ApiSchema {
         EmptySubscription,
     )
     .data(TeamdeckApiClient::default())
+    .data(AsyncTeamdeck::new(
+        std::env::var("TEAMDECK_API_KEY").unwrap(),
+    ))
     .data(Timers::default())
     .extension(ApolloTracing)
     .finish()

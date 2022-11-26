@@ -1,4 +1,7 @@
-use std::{time::{Duration, SystemTime}, ops::Deref};
+use std::{
+    ops::Deref,
+    time::{Duration, SystemTime},
+};
 
 use async_graphql::SimpleObject;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};

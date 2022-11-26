@@ -1,19 +1,24 @@
 use crate::auth::guard::AccessTokenAuthGuard;
 use crate::auth::token::ResourceId;
-use crate::project::Project;
-use crate::resource::Resource;
+use crate::project::ProjectModel;
+use crate::resource::ResourceModel;
 use crate::scalars::Date;
 use crate::teamdeck::api::{CreateTimeEntryBody, TeamdeckApiClient, UpdateTimeEntryBody};
 use crate::time_entry_tag::TimeEntryTag;
 use async_graphql::{ComplexObject, Context, InputObject, Object, Result, ResultExt, SimpleObject};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
+use teamdeck::api::projects::Project;
+use teamdeck::api::resources::Resource;
+use teamdeck::api::time_entries::{TimeEntries, TimeEntry};
+use teamdeck::api::AsyncQuery;
+use teamdeck::AsyncTeamdeck;
 use thiserror::Error;
 use tracing::error;
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug)]
 #[graphql(complex)]
-pub struct TimeEntry {
+pub struct TimeEntryModel {
     id: u64,
     resource_id: u64,
     project_id: u64,
@@ -31,17 +36,27 @@ pub struct TimeEntry {
 }
 
 #[ComplexObject]
-impl TimeEntry {
-    async fn project(&self, ctx: &Context<'_>) -> Result<Option<Project>> {
-        let client = ctx.data_unchecked::<TeamdeckApiClient>();
-        let project = client.get_project_by_id(self.project_id).await.extend();
-        Ok(project.unwrap_or(None))
+impl TimeEntryModel {
+    async fn project(&self, ctx: &Context<'_>) -> Result<Option<ProjectModel>> {
+        let client = ctx.data_unchecked::<AsyncTeamdeck>();
+        let endpoint = Project::builder()
+            .id(self.project_id as usize)
+            .build()
+            .unwrap();
+
+        let project = endpoint.query_async(client).await?;
+        Ok(project)
     }
 
-    async fn resource(&self, ctx: &Context<'_>) -> Result<Option<Resource>> {
-        let client = ctx.data_unchecked::<TeamdeckApiClient>();
-        let resource = client.get_resource_by_id(self.resource_id).await.extend();
-        Ok(resource.unwrap_or(None))
+    async fn resource(&self, ctx: &Context<'_>) -> Result<Option<ResourceModel>> {
+        let client = ctx.data_unchecked::<AsyncTeamdeck>();
+        let endpoint = Resource::builder()
+            .id(self.resource_id as usize)
+            .build()
+            .unwrap();
+
+        let resource = endpoint.query_async(client).await?;
+        Ok(resource)
     }
 
     async fn formatted_duration(&self) -> Result<String> {
@@ -65,13 +80,15 @@ impl TimeEntryQuery {
         ctx: &Context<'_>,
         date: Option<Date>,
         project_id: Option<u64>,
-    ) -> Result<Vec<TimeEntry>> {
-        let client = ctx.data_unchecked::<TeamdeckApiClient>();
+    ) -> Result<Vec<TimeEntryModel>> {
         let resource_id = *ctx.data_unchecked::<ResourceId>();
-        let time_entries = client
-            .get_time_entries(resource_id.into(), date.map(|d| d.0))
-            .await
-            .extend()?;
+        let client = ctx.data_unchecked::<AsyncTeamdeck>();
+        let endpoint = TimeEntries::builder()
+            .resource_id(resource_id.0)
+            .build()
+            .unwrap();
+
+        let time_entries: Vec<TimeEntryModel> = endpoint.query_async(client).await?;
 
         let time_entries = match project_id {
             None => time_entries,
@@ -129,7 +146,7 @@ impl TimeEntryMutation {
         &self,
         ctx: &Context<'_>,
         time_entry: CreateTimeEntryInput,
-    ) -> Result<TimeEntry> {
+    ) -> Result<TimeEntryModel> {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
         let resource_id = *ctx.data_unchecked::<ResourceId>();
 
@@ -142,10 +159,14 @@ impl TimeEntryMutation {
             .await
             .extend()
             .map_err(|e| error!("{:?}", e));
-        created_entry = client
-            .get_time_entry_by_id(created_entry.id)
-            .await
-            .extend()?;
+
+        let client = ctx.data_unchecked::<AsyncTeamdeck>();
+        let endpoint = TimeEntry::builder()
+            .id(created_entry.id as usize)
+            .build()
+            .unwrap();
+
+        let created_entry = endpoint.query_async(client).await?;
 
         Ok(created_entry)
     }
@@ -157,12 +178,18 @@ impl TimeEntryMutation {
         ctx: &Context<'_>,
         time_entry_id: u64,
         update_data: UpdateTimeEntryInput,
-    ) -> Result<TimeEntry> {
+    ) -> Result<TimeEntryModel> {
         let client = ctx.data_unchecked::<TeamdeckApiClient>();
         let resource_id = *ctx.data_unchecked::<ResourceId>();
         let resource_id = resource_id.0;
 
-        let time_entry: TimeEntry = client.get_time_entry_by_id(time_entry_id).await.extend()?;
+        let td = ctx.data_unchecked::<AsyncTeamdeck>();
+        let endpoint = TimeEntry::builder()
+            .id(time_entry_id as usize)
+            .build()
+            .unwrap();
+
+        let time_entry: TimeEntryModel = endpoint.query_async(td).await?;
 
         if time_entry.resource_id != resource_id {
             Err(UpdateTimeEntryError::NotACreator.into())
@@ -204,7 +231,8 @@ impl TimeEntryMutation {
                         .await
                         .extend()
                         .map_err(|e| error!("{:?}", e));
-                    updated_entry = client.get_time_entry_by_id(time_entry_id).await.extend()?;
+
+                    updated_entry = endpoint.query_async(td).await?;
                 }
             }
 

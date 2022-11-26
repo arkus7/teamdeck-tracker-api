@@ -3,8 +3,12 @@ pub mod guard;
 pub mod token;
 
 use async_graphql::{Context, Object, Result};
+use teamdeck::{
+    api::{resources::Resources, AsyncQuery},
+    AsyncTeamdeck,
+};
 
-use crate::teamdeck::api::TeamdeckApiClient;
+use crate::resource::ResourceModel;
 
 #[derive(Default, Debug)]
 pub struct AuthQuery;
@@ -31,8 +35,11 @@ impl AuthMutation {
             google::GoogleOAuth2::exchange_code_for_token(authorization_code).await?;
         let email = google_token.email()?;
 
-        let teamdeck_api = ctx.data_unchecked::<TeamdeckApiClient>();
-        let resource = teamdeck_api.get_resource_by_email(&email).await?;
+        let client = ctx.data_unchecked::<AsyncTeamdeck>();
+        let endpoint = Resources::builder().email(&email).build().unwrap();
+
+        let resources: Vec<ResourceModel> = endpoint.query_async(client).await?;
+        let resource = resources.first();
 
         if let Some(resource) = resource {
             let token =
