@@ -42,7 +42,7 @@ impl ResourceQuery {
     async fn resources(&self, ctx: &Context<'_>) -> Result<Vec<ResourceModel>> {
         let client = ctx.data_unchecked::<AsyncTeamdeck>();
         let endpoint = Resources::builder()
-            .sort(SortBy::Ascending(ResourcesSortBy::Name))
+            .sort(SortBy::Asc(ResourcesSortBy::Name))
             .build()
             .unwrap();
         let resources = paged(endpoint, Pagination::All).query_async(client).await?;

@@ -3,15 +3,16 @@ use crate::auth::token::ResourceId;
 use crate::project::ProjectModel;
 use crate::resource::ResourceModel;
 use crate::scalars::Date;
+use crate::sort_by_enum::sort_by_enum;
 use crate::teamdeck::api::{CreateTimeEntryBody, TeamdeckApiClient, UpdateTimeEntryBody};
-use crate::time_entry_tag::TimeEntryTag;
+use crate::time_entry_tag::TimeEntryTagModel;
 use async_graphql::{ComplexObject, Context, InputObject, Object, Result, ResultExt, SimpleObject};
 use chrono::Duration;
 use serde::{Deserialize, Serialize};
 use teamdeck::api::projects::Project;
 use teamdeck::api::resources::Resource;
-use teamdeck::api::time_entries::{TimeEntries, TimeEntry};
-use teamdeck::api::AsyncQuery;
+use teamdeck::api::time_entries::{TimeEntries, TimeEntriesExpand, TimeEntry};
+use teamdeck::api::{paged, AsyncQuery, Pagination};
 use teamdeck::AsyncTeamdeck;
 use thiserror::Error;
 use tracing::error;
@@ -32,7 +33,68 @@ pub struct TimeEntryModel {
     end_date: Date,
     creator_resource_id: Option<u64>,
     editor_resource_id: Option<u64>,
-    tags: Option<Vec<TimeEntryTag>>,
+    tags: Option<Vec<TimeEntryTagModel>>,
+}
+
+sort_by_enum!(
+    TimeEntriesSortBy {
+        ResourceId,
+        ProjectId,
+        Minutes,
+        WeekendBooking,
+        HolidaysBooking,
+        VacationsBooking,
+        Description,
+        ExternalId,
+        StartDate,
+        EndDate,
+        CreatorResourceId,
+        EditorResourceId
+    },
+    teamdeck::api::time_entries::TimeEntriesSortBy
+);
+
+#[derive(InputObject, Debug)]
+pub struct TimeEntryFilter {
+    /// Sorts results by the given field in the given direction.
+    ///
+    /// Default: `StartDate` descending
+    sort: Option<TimeEntriesSortBy>,
+
+    /// The page number to return.
+    /// Pages start at 0.
+    ///
+    /// If not specified, all pages are returned.
+    page: Option<u64>,
+
+    /// The ID of project(s) to filter by.
+    ///
+    /// Multiple IDs can be passed. By default, all of the entries are returned.
+    project_id: Option<Vec<u64>>,
+
+    /// The external ID to filter by
+    ///
+    /// Multiple IDs can be passed. By default, all of the entries are returned.
+    external_id: Option<Vec<String>>,
+    /// The date range of the time entry start date to filter by.
+    ///
+    /// Cannot be used together with `date`.
+    start_date: Option<TimeEntryDateRange>,
+    /// The date range of the time entry end date to filter by.
+    ///
+    /// Cannot be used together with `date`.
+    end_date: Option<TimeEntryDateRange>,
+
+    /// The date of the time entry to filter by.
+    ///
+    /// Cannot be used together with `start_date` or `end_date`.
+    date: Option<Date>,
+}
+
+#[derive(InputObject, Debug)]
+pub struct TimeEntryDateRange {
+    from: Date,
+    to: Date,
 }
 
 #[ComplexObject]
@@ -78,25 +140,47 @@ impl TimeEntryQuery {
     async fn time_entries(
         &self,
         ctx: &Context<'_>,
-        date: Option<Date>,
-        project_id: Option<u64>,
+        filter: TimeEntryFilter,
     ) -> Result<Vec<TimeEntryModel>> {
         let resource_id = *ctx.data_unchecked::<ResourceId>();
         let client = ctx.data_unchecked::<AsyncTeamdeck>();
-        let endpoint = TimeEntries::builder()
-            .resource_id(resource_id.0)
-            .build()
-            .unwrap();
 
-        let time_entries: Vec<TimeEntryModel> = endpoint.query_async(client).await?;
+        let mut builder = TimeEntries::builder();
+        builder
+            .resource_id(vec![resource_id.0])
+            .expand(TimeEntriesExpand::Tags);
+        if let Some(project) = filter.project_id {
+            builder.project_id(project);
+        }
 
-        let time_entries = match project_id {
-            None => time_entries,
-            Some(id) => time_entries
-                .into_iter()
-                .filter(|e| e.project_id == id)
-                .collect(),
-        };
+        if let Some(external_id) = filter.external_id {
+            builder.external_id(external_id);
+        }
+
+        if let Some(start_date) = filter.start_date {
+            builder
+                .start_date_from(start_date.from.0)
+                .start_date_to(start_date.to.0);
+        }
+
+        if let Some(end_date) = filter.end_date {
+            builder
+                .start_date_from(end_date.from.0)
+                .start_date_to(end_date.to.0);
+        }
+
+        if let Some(sort) = filter.sort {
+            builder.sort(sort.into());
+        }
+
+        if let Some(date) = filter.date {
+            builder.date(date.0);
+        }
+
+        let endpoint = builder.build()?;
+
+        let time_entries: Vec<TimeEntryModel> =
+            paged(endpoint, Pagination::All).query_async(client).await?;
 
         Ok(time_entries)
     }
