@@ -2,6 +2,7 @@ pub mod auth;
 mod project;
 mod resource;
 mod scalars;
+mod sort_by_enum;
 mod teamdeck;
 mod time_entry;
 mod time_entry_tag;
