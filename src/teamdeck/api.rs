@@ -1,15 +1,11 @@
 use crate::scalars::Date;
 use crate::teamdeck::error::TeamdeckApiError;
 use crate::time_entry::{CreateTimeEntryInput, TimeEntryModel};
-use crate::time_entry_tag::TimeEntryTag;
 use chrono::{NaiveDate, Utc};
-use reqwest::header::{HeaderMap, HeaderName};
+use reqwest;
 use reqwest::IntoUrl;
-use reqwest::{self};
 use serde::Serialize;
-use std::collections::HashMap;
-use std::fmt::{Debug, Display, Formatter};
-use std::future::Future;
+use std::fmt::Debug;
 
 const API_KEY_ENV_VARIABLE: &str = "TEAMDECK_API_KEY";
 const API_KEY_HEADER_NAME: &str = "X-Api-Key";
@@ -21,37 +17,6 @@ pub struct TeamdeckApiClient {
 impl Default for TeamdeckApiClient {
     fn default() -> Self {
         TeamdeckApiClient::from_env()
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-enum PaginationHeader {
-    TotalCount,
-    PagesCount,
-    CurrentPage,
-    ItemsPerPage,
-}
-
-impl PaginationHeader {
-    fn as_str(&self) -> &'static str {
-        match self {
-            PaginationHeader::TotalCount => "x-pagination-total-count",
-            PaginationHeader::PagesCount => "x-pagination-page-count",
-            PaginationHeader::CurrentPage => "x-pagination-current-page",
-            PaginationHeader::ItemsPerPage => "x-pagination-per-page",
-        }
-    }
-}
-
-impl Display for PaginationHeader {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-impl From<PaginationHeader> for HeaderName {
-    fn from(header: PaginationHeader) -> Self {
-        HeaderName::from_static(header.as_str())
     }
 }
 
@@ -150,64 +115,6 @@ impl TeamdeckApiClient {
         Ok(updated_entry)
     }
 
-    #[tracing::instrument(
-        name = "Fetching time entry tags page from Teamdeck API",
-        skip(self),
-        err
-    )]
-    pub async fn get_time_entry_tags_page(
-        &self,
-        page: Option<u64>,
-    ) -> Result<Page<TimeEntryTag>, TeamdeckApiError> {
-        let mut params = HashMap::new();
-        params.insert("page", page.unwrap_or(1).to_string());
-
-        let response = self
-            .get("https://api.teamdeck.io/v1/time-entry-tags")
-            .query(&params)
-            .send()
-            .await?;
-
-        let headers = response.headers();
-        let pagination = TeamdeckApiClient::read_pagination_info(headers)?;
-
-        let time_entries = response.json().await?;
-
-        Ok(Page {
-            items: time_entries,
-            pagination,
-        })
-    }
-
-    #[tracing::instrument(
-        name = "Fetching all time entry tags from Teamdeck API",
-        skip(self),
-        err
-    )]
-    pub async fn get_time_entry_tags(&self) -> Result<Vec<TimeEntryTag>, TeamdeckApiError> {
-        self.traverse_all_pages(|page| self.get_time_entry_tags_page(page))
-            .await
-    }
-
-    #[tracing::instrument(
-        name = "Fetching time entry tag by ID from Teamdeck API",
-        skip(self),
-        err
-    )]
-    pub async fn get_time_entry_tag(
-        &self,
-        tag_id: u64,
-    ) -> Result<Option<TimeEntryTag>, TeamdeckApiError> {
-        let tag = self
-            .get(format!("https://api.teamdeck.io/v1/time-entry-tags/{}", tag_id).as_str())
-            .send()
-            .await?
-            .json()
-            .await?;
-
-        Ok(Some(tag))
-    }
-
     #[tracing::instrument(name = "Update time entry tags", skip(self), err)]
     pub async fn update_time_entry_tags(
         &self,
@@ -245,12 +152,6 @@ impl TeamdeckApiClient {
         Ok(time_entry)
     }
 
-    fn get<U: IntoUrl>(&self, url: U) -> reqwest::RequestBuilder {
-        reqwest::Client::new()
-            .get(url)
-            .header(API_KEY_HEADER_NAME, &self.api_key)
-    }
-
     fn put<U: IntoUrl>(&self, url: U) -> reqwest::RequestBuilder {
         reqwest::Client::new()
             .put(url)
@@ -261,76 +162,5 @@ impl TeamdeckApiClient {
         reqwest::Client::new()
             .post(url)
             .header(API_KEY_HEADER_NAME, &self.api_key)
-    }
-
-    fn read_pagination_info(headers: &HeaderMap) -> Result<PaginationInfo, TeamdeckApiError> {
-        let pages_count = TeamdeckApiClient::get_pagination_header_value(
-            headers,
-            PaginationHeader::PagesCount.into(),
-        )?;
-        let total_count = TeamdeckApiClient::get_pagination_header_value(
-            headers,
-            PaginationHeader::TotalCount.into(),
-        )?;
-        let current_page = TeamdeckApiClient::get_pagination_header_value(
-            headers,
-            PaginationHeader::CurrentPage.into(),
-        )?;
-        let items_per_page = TeamdeckApiClient::get_pagination_header_value(
-            headers,
-            PaginationHeader::ItemsPerPage.into(),
-        )?;
-
-        Ok(PaginationInfo {
-            total_count,
-            pages_count,
-            current_page,
-            items_per_page,
-        })
-    }
-
-    fn get_pagination_header_value(
-        headers: &HeaderMap,
-        header: HeaderName,
-    ) -> Result<u64, TeamdeckApiError> {
-        let header_value = headers.get(&header).ok_or_else(|| {
-            TeamdeckApiError::ServerError(format!("Missing {} header value in response", &header))
-        });
-
-        let string_val = header_value?
-            .to_str()
-            .map_err(|e| TeamdeckApiError::ServerError(e.to_string()))?;
-        string_val
-            .parse::<u64>()
-            .map_err(|e| TeamdeckApiError::ServerError(e.to_string()))
-    }
-
-    #[tracing::instrument(
-        name = "Traverse all pages",
-        skip(self, f),
-        level = "debug"
-        err
-    )]
-    async fn traverse_all_pages<F, ResultFuture, PageItem>(
-        &self,
-        f: F,
-    ) -> Result<Vec<PageItem>, TeamdeckApiError>
-    where
-        F: Copy + FnOnce(Option<u64>) -> ResultFuture,
-        ResultFuture: Future<Output = Result<Page<PageItem>, TeamdeckApiError>>,
-        PageItem: Serialize + Debug,
-    {
-        let mut items: Vec<PageItem> = vec![];
-        let mut current_page = 0;
-        let mut total_pages: u64 = 1;
-
-        while current_page != total_pages && total_pages != 0 {
-            current_page += 1;
-            let page = f(Some(current_page)).await?;
-            items.extend(page.items);
-            total_pages = page.pagination.pages_count;
-        }
-
-        Ok(items)
     }
 }
