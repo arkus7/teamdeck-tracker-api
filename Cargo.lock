@@ -1891,7 +1891,6 @@ dependencies = [
 [[package]]
 name = "teamdeck"
 version = "0.1.0"
-source = "git+https://github.com/arkus7/teamdeck-api-client-rs#d51eee5a1c98fbae7b4d9db87ae6bcdc49297639"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1918,6 +1917,7 @@ dependencies = [
  "chrono",
  "dotenv",
  "jsonwebtoken",
+ "paste",
  "reqwest",
  "serde",
  "serde_json",
