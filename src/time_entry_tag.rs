@@ -1,9 +1,16 @@
-use crate::teamdeck::api::TeamdeckApiClient;
-use async_graphql::{Context, Object, Result, ResultExt, SimpleObject};
+use async_graphql::{Context, Object, Result, SimpleObject};
 use serde::{de::Unexpected, Deserialize, Deserializer, Serialize};
+use teamdeck::{
+    api::{
+        paged,
+        time_entries::{TimeEntryTag, TimeEntryTags},
+        AsyncQuery, Pagination,
+    },
+    AsyncTeamdeck,
+};
 
 #[derive(Serialize, Deserialize, SimpleObject, Debug)]
-pub struct TimeEntryTag {
+pub struct TimeEntryTagModel {
     id: u64,
     name: String,
     icon: Option<String>,
@@ -18,16 +25,24 @@ pub struct TimeEntryTagQuery;
 #[Object]
 impl TimeEntryTagQuery {
     #[tracing::instrument(name = "Fetching time entry tag by id", skip(ctx))]
-    async fn time_entry_tag(&self, ctx: &Context<'_>, tag_id: u64) -> Result<Option<TimeEntryTag>> {
-        let client = ctx.data_unchecked::<TeamdeckApiClient>();
-        let tag: Option<TimeEntryTag> = client.get_time_entry_tag(tag_id).await.extend()?;
+    async fn time_entry_tag(
+        &self,
+        ctx: &Context<'_>,
+        tag_id: u64,
+    ) -> Result<Option<TimeEntryTagModel>> {
+        let client = ctx.data_unchecked::<AsyncTeamdeck>();
+        let endpoint = TimeEntryTag::builder().id(tag_id as usize).build()?;
+
+        let tag = endpoint.query_async(client).await?;
         Ok(tag)
     }
 
     #[tracing::instrument(name = "Fetching all time entry tags", skip(ctx))]
-    async fn time_entry_tags(&self, ctx: &Context<'_>) -> Result<Vec<TimeEntryTag>> {
-        let client = ctx.data_unchecked::<TeamdeckApiClient>();
-        let tags: Vec<TimeEntryTag> = client.get_time_entry_tags().await.extend()?;
+    async fn time_entry_tags(&self, ctx: &Context<'_>) -> Result<Vec<TimeEntryTagModel>> {
+        let client = ctx.data_unchecked::<AsyncTeamdeck>();
+        let endpoint = TimeEntryTags::builder().build()?;
+
+        let tags = paged(endpoint, Pagination::All).query_async(client).await?;
         Ok(tags)
     }
 }
