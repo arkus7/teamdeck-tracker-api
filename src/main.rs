@@ -1,4 +1,3 @@
-#![feature(unboxed_closures)]
 mod telemetry;
 
 use crate::telemetry::{get_logs_subscriber, init_logs_subscriber};
